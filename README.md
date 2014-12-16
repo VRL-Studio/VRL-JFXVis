@@ -29,3 +29,7 @@ Navigate to the [Gradle](http://www.gradle.org/) project (e.g., `path/to/JFX3DSa
 #### Windows (CMD)
 
     gradlew run
+VRL-JFXVis
+==========
+
+Visualization Plugin for VRL
