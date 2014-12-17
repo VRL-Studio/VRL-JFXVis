@@ -3,7 +3,7 @@ JFX3DSample
 
 JavaFX 3D sample application.
 
-![](/resources/img/screenshot.png)
+
 
 ## How to Run It
 
@@ -33,3 +33,8 @@ VRL-JFXVis
 ==========
 
 Visualization Plugin for VRL
+
+Controls:
+-Cycle through subsets : +
+-Show all subsets : -
+-Move camera : w,a,s,d

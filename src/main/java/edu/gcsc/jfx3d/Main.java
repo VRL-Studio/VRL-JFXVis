@@ -173,7 +173,7 @@ public class Main extends Application{
 //        root.getChildren().add(tire);
         
         UGXReader ugxr = null;
-        String filePath = "../JFX3DSample-master/src/main/java/edu/gcsc/jfx3d/ugx/bigSpineBigAppBot.ugx";
+        String filePath = "../VRL-JFXVis/src/main/java/edu/gcsc/jfx3d/ugx/bigSpineBigAppBot.ugx";
   
         ugxGeometry = xbuildUGX(filePath, false, true);
         
