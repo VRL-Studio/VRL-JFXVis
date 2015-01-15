@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<grid name="defGrid">
+	<vertices coords="3">-1 -1 -1 1 -1 -1 1 1 -1 -1 1 -1 0 0 1</vertices>
+	<edges>0 3 3 2 2 1 1 0 1 4 4 0 2 4 3 4</edges>
+	<triangles>0 1 4 1 2 4 2 3 4 0 4 3</triangles>
+	<quadrilaterals>0 3 2 1</quadrilaterals>
+	<pyramids>0 1 2 3 4</pyramids>
+	<subset_handler name="defSH">
+		<subset name="subset" color="1 0.0470588 0.172549 -1" state="393216">
+			<vertices>0 1 2 3 4</vertices>
+			<edges>0 1 2 3 4 5 6 7</edges>
+			<faces>0 1 2 3 4</faces>
+			<volumes>0</volumes>
+		</subset>
+	</subset_handler>
+	<subset_handler name="markSH">
+		<subset name="crease" color="1 1 1 1" state="0"/>
+		<subset name="fixed" color="1 1 1 1" state="0"/>
+	</subset_handler>
+	<selector name="defSel">
+		<vertices>1 1</vertices>
+	</selector>
+</grid>
+
