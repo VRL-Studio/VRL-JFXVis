@@ -66,12 +66,9 @@ public class UGXReader {
             System.out.println("File was not found");
             ex.printStackTrace(System.out);
         }
-        System.out.println("1");
         XStream xstream = new XStream();
-        System.out.println("2");
         xstream.alias("grid", UGXfile.class);
         xstream.alias("subset_handler",UGXsubset.class);
-        
         
         xstream.processAnnotations(UGXfile.class);
         xstream.processAnnotations(UGXsubset.class);

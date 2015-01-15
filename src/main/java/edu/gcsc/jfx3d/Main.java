@@ -1,6 +1,7 @@
 package edu.gcsc.jfx3d;
 
 import com.thoughtworks.xstream.annotations.XStreamAlias;
+import java.util.ArrayList;
 import javafx.application.Application;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -111,7 +112,7 @@ public class Main extends Application{
             primaryStage.show();
             
             handleKeyboard(scene, camera);
-            handleMouse(scene, camera);
+            handleMouse(scene, camera);                                                                                                                                                                                                                                     
             
             
         } catch (Exception e) {
@@ -173,7 +174,7 @@ public class Main extends Application{
 //        root.getChildren().add(tire);
         
         UGXReader ugxr = null;
-        String filePath = "../VRL-JFXVis/src/main/java/edu/gcsc/jfx3d/ugx/bigSpineBigAppBot.ugx";
+        String filePath = "../VRL-JFXVis/src/main/java/edu/gcsc/jfx3d/ugx/testobject4.ugx";
   
         ugxGeometry = xbuildUGX(filePath, false, true);
         
@@ -692,7 +693,7 @@ public class Main extends Application{
         return subsetGroup;
     }
     
-    
+    /*Creates a 3D object from a ugx file using the xStream library */
     private Group xbuildUGX (String filePath, boolean ambient, boolean fill){
         
         UGXReader reader = new UGXReader(filePath);
@@ -701,14 +702,58 @@ public class Main extends Application{
         
         
         float[] vertices = ugxfile.getGlobalVerticesArray();
-        int[] triangles = ugxfile.getTrianglesArray();
+        ArrayList<Triangle> triangles = ugxfile.getTriangles();
+        ArrayList<Quadrilateral> quadrilaterals = ugxfile.getQuadrilaterals();
+        ArrayList<Tetrahedron> tetrahedrons = ugxfile.getTetrahedrons();
+        ArrayList<Hexahedron> hexahedrons = ugxfile.getHexahedrons();
+        ArrayList<Prism> prisms = ugxfile.getPrisms();
+        ArrayList<Pyramid> pyramids = ugxfile.getPyramids();
         int[] tetra = ugxfile.getTetraedronsArray();
         TriangleMesh mesh = new TriangleMesh();
         
       
+        ArrayList<Geometry2D> geometry2DList = new ArrayList<Geometry2D>();
+        ArrayList<Geometry3D> geometry3DList = new ArrayList<Geometry3D>();
+        
+        if (ugxfile.containsTriangles()) {
+            for (int i = 0; i < triangles.size(); i++) {
+                geometry2DList.add(triangles.get(i));
+            }
+        }
+        
+        if (ugxfile.containsQuadrilaterals()) {
+            for (int i = 0; i < quadrilaterals.size(); i++) {
+                geometry2DList.add(quadrilaterals.get(i));
+            }
+        }
+        
+        if (ugxfile.containsTetrahedrons()) {
+            for (int i = 0; i < tetrahedrons.size(); i++) {
+                geometry3DList.add(tetrahedrons.get(i));
+            }
+        }
+        
+        if (ugxfile.containsHexahedrons()) {
+            for (int i = 0; i < hexahedrons.size(); i++) {
+                geometry3DList.add(hexahedrons.get(i));
+            }
+        }
+        
+        if (ugxfile.containsPrisms()) {
+            for (int i = 0; i < prisms.size(); i++) {
+                geometry3DList.add(prisms.get(i));
+            }
+        }
+        
+        if (ugxfile.containsPyramids()) {
+            for (int i = 0; i < pyramids.size(); i++) {
+                geometry3DList.add(pyramids.get(i));
+            }
+        }
+        
         mesh.getPoints().addAll(vertices);
         mesh.getTexCoords().addAll(0,0);
-            
+        
         
         int ssNumber = ugxfile.getSubset_handler().get(0).getSubsets().size();
        
@@ -719,10 +764,10 @@ public class Main extends Application{
         int[] ssFaces;
         int[] ssVolumes;
        
-        int counter = 0;
+        int counter2DStruc = 0;
         MeshView[] meshViewArray = new MeshView[ssNumber];
         for (int i = 0; i < ssNumber; i++) {
-            
+
             meshArray[i].getPoints().addAll(vertices);
             meshArray[i].getTexCoords().addAll(0,0);
             
@@ -732,34 +777,113 @@ public class Main extends Application{
             ssVolumes = ugxfile.getSubset_handler().get(0).getSubsets().get(i).getVolumeArray();
             
 
-            //System.out.println("------------------");
-            for (int j = 0; j < ssFaces.length ; j++) {   
-//                System.out.println("triangles " + triangles[ssFaces[j]*3] + "  " + triangles[(ssFaces[j]*3)+1] + "  "+ triangles[(ssFaces[j]*3)+2] + "  "  );   
-//                System.out.println("ssFace " + ssFaces[j]  );   
-                meshArray[i].getFaces().addAll(triangles[ssFaces[j]*3+2],0, triangles[(ssFaces[j]*3)+1],0,triangles[(ssFaces[j]*3)],0);
-           
-            // 2, 1, 0
-            // 2,3,1
+            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasFaces()) {
+                System.out.println(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getSubsetName() + " has faces");
+                int facesLength = 0;
+                
+                for (int j = 0; j < ssFaces.length; j++) {
+                    meshArray[i].getFaces().addAll(geometry2DList.get(ssFaces[j]).getFacesArray());
+                }
             }
             
-            
-            //System.out.println("-------------------------"  );
-            if (ssVolumes.length > 1) {
-                for (int j = 0; j < ssVolumes.length ; j++) {   
-       
-                      meshArray[i].getFaces().addAll(tetra[ssVolumes[j]*4],0, tetra[(ssVolumes[j]*4)+2],0,tetra[(ssVolumes[j]*4)+1],0);
-                      meshArray[i].getFaces().addAll(tetra[ssVolumes[j]*4+1],0, tetra[(ssVolumes[j]*4)+2],0,tetra[(ssVolumes[j]*4)+3],0);
-                      meshArray[i].getFaces().addAll(tetra[ssVolumes[j]*4],0, tetra[(ssVolumes[j]*4)+3],0,tetra[(ssVolumes[j]*4)+2],0);
-                      meshArray[i].getFaces().addAll(tetra[ssVolumes[j]*4],0, tetra[(ssVolumes[j]*4)+1],0,tetra[(ssVolumes[j]*4)+3],0);
-               
-               //0 2 1, 1 2 3, 0 3 2, 0 1 3
-
+            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVolumes()){
+                System.out.println(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getSubsetName() + " has volumes");
+                
+                for (int j = 0; j < ssVolumes.length; j++) {
+                    meshArray[i].getFaces().addAll(geometry3DList.get(ssVolumes[j]).getFacesArray());
+                }
                 
             }
-//                System.out.println(" VERTEX ARRAY SIZE OF " + i + " " +meshArray[i].getPoints().size());
-//                System.out.println(" FACE ARRAY SIZE OF " + i + " " +meshArray[i].getFaces().size());
+                
+                //-------------------------------------------------------------------------------------------------------------------------------------
+//                
+//                if(ugxfile.containsTriangles() && (ssFaces[0]<triangles.size())){
+//                    System.out.println("Building triangles for " + ugxfile.getSubset_handler().get(0).getSubsets().get(i).getSubsetName() + " subset.");
+//                
+//                    facesLength = ssFaces.length;
+//                    
+//                    if (ugxfile.containsQuadrilaterals()) {
+//                        if (ssFaces[ssFaces.length - 1] > triangles.size()) {
+//                            facesLength = triangles.size();
+//                        }
+//                    }
+//                    
+//                    for (int j = 0; j < facesLength; j++) {
+//                        
+////                        System.out.println(vertices[triangles.get(ssFaces[j]).getNodes()[0]] + "  " + triangles.get(ssFaces[j]).getNodes()[0]);
+////                        System.out.println(vertices[triangles.get(ssFaces[j]).getNodes()[1]] + "  " + triangles.get(ssFaces[j]).getNodes()[1]);
+////                        System.out.println(vertices[triangles.get(ssFaces[j]).getNodes()[2]] + "  " + triangles.get(ssFaces[j]).getNodes()[2]);
+//
+////                        System.out.println("-------" + counter++ );
+//                    
+//                          
+//                        //meshArray[i].getFaces().addAll(triangles[ssFaces[j] * 3 + 2], 0, triangles[(ssFaces[j] * 3) + 1], 0, triangles[(ssFaces[j] * 3)], 0);
+//                       
+//                        meshArray[i].getFaces().addAll(geometry2DList.get(ssFaces[j]).getFacesArray());
+//                        counter2DStruc++;
+//                    }
+//            // 2, 1, 0
+//                    // 2,3,1
+//                }
+//                
+//                if(ugxfile.containsQuadrilaterals() && (facesLength != ssFaces.length)){
+//                    System.out.println("Building quadrilaterals for " + ugxfile.getSubset_handler().get(0).getSubsets().get(i).getSubsetName() + " subset.");
+//                    
+//                    
+//                    int[] ssRestFaces = ssFaces;
+//                    if (ugxfile.containsTriangles()) {
+//                        
+//                        
+//                      
+//                        
+//                        
+//                           ssRestFaces = new int[ssFaces.length - facesLength];
+//
+//                        for (int j = 0; j < ssRestFaces.length; j++) {
+//                            ssRestFaces[j] = ssFaces[facesLength + j];
+//                            //System.out.print(ssRestFaces[j] + "  ");
+//                        }
+//                        
+//                    }
+//                    
+//                    
+//                    for (int j = 0; j < quadrilaterals.size(); j++) {
+//                        
+////                        System.out.println(quadrilaterals.get(ssRestFaces[j]-counter2DStruc).getNodes()[0]);
+////                        System.out.println(quadrilaterals.get(ssRestFaces[j]-counter2DStruc).getNodes()[1]);
+////                        System.out.println(quadrilaterals.get(ssRestFaces[j]-counter2DStruc).getNodes()[2]);
+////                        System.out.println(quadrilaterals.get(ssRestFaces[j]-counter2DStruc).getNodes()[3]);
+////                        System.out.println("--------------------------------------" + j);
+//                        
+//                        System.out.println(geometry2DList.size());
+//                        meshArray[i].getFaces().addAll(geometry2DList.get(ssFaces[counter2DStruc]).getFacesArray());
+//
+//                        counter2DStruc++;
+//                    }
+//                }
+                
+                //----------------------------------------------------------------------------------------------------------------------------
+                
+                
+            
+            
+            if (ssVolumes.length > 0) {
+//                for (int j = 0; j < ssVolumes.length ; j++) {   
+//       
+//                      meshArray[i].getFaces().addAll(tetra[ssVolumes[j]*4],0, tetra[(ssVolumes[j]*4)+2],0,tetra[(ssVolumes[j]*4)+1],0);
+//                      meshArray[i].getFaces().addAll(tetra[ssVolumes[j]*4+1],0, tetra[(ssVolumes[j]*4)+2],0,tetra[(ssVolumes[j]*4)+3],0);
+//                      meshArray[i].getFaces().addAll(tetra[ssVolumes[j]*4],0, tetra[(ssVolumes[j]*4)+3],0,tetra[(ssVolumes[j]*4)+2],0);
+//                      meshArray[i].getFaces().addAll(tetra[ssVolumes[j]*4],0, tetra[(ssVolumes[j]*4)+1],0,tetra[(ssVolumes[j]*4)+3],0);
+//               
+//               //0 2 1, 1 2 3, 0 3 2, 0 1 3
+//
+//                
+//            }
+                
               
             }
+            System.out.println(" VERTEX ARRAY SIZE OF " + i + " " +meshArray[i].getPoints().size());
+            System.out.println(" FACE ARRAY SIZE OF " + i + " " +meshArray[i].getFaces().size());
             
             
             
@@ -790,7 +914,7 @@ public class Main extends Application{
                 Color ssColor = new Color(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[0],
                 ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[1],
                 ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[2],
-                ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[3]);
+                Math.abs(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[3]));
                 
                 PhongMaterial material = new PhongMaterial(ssColor);
                 meshViewArray[i].setMaterial(material);

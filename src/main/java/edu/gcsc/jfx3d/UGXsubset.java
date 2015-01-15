@@ -24,7 +24,10 @@ public class UGXsubset {
 
     private ArrayList<Integer> volumes = new ArrayList<Integer>();
     
-    
+    private boolean hasVertices = false;
+    private boolean hasEdges = false;
+    private boolean hasFaces = false;
+    private boolean hasVolumes = false;
     
     
     @XStreamAlias("name")
@@ -179,6 +182,7 @@ public class UGXsubset {
                 for (int i = 0; i < vertStringArray.length; i++) {
                     vertices.add(Integer.parseInt(vertStringArray[i]));
                 }
+                hasVertices = true;
             }
         } catch (Exception e) {
            
@@ -191,6 +195,7 @@ public class UGXsubset {
                 for (int i = 0; i < edgesStringArray.length; i++) {
                     edges.add(Integer.parseInt(edgesStringArray[i]));
                 }
+                hasEdges = true;
             }
         } catch (Exception e) {
           
@@ -203,6 +208,7 @@ public class UGXsubset {
                 for (int i = 0; i < facesStringArray.length; i++) {
                     faces.add(Integer.parseInt(facesStringArray[i]));
                 }
+                hasFaces = true;
             }
         } catch (Exception e) {
          
@@ -215,6 +221,7 @@ public class UGXsubset {
                 for (int i = 0; i < volumesStringArray.length; i++) {
                     volumes.add(Integer.parseInt(volumesStringArray[i]));
                 }
+                hasVolumes = true;
             }
         } catch (Exception e) {
            
@@ -234,5 +241,24 @@ public class UGXsubset {
         
         
     }
+
+    public boolean isHasVertices() {
+        return hasVertices;
+    }
+
+    public boolean isHasEdges() {
+        return hasEdges;
+    }
+
+    public boolean isHasFaces() {
+        return hasFaces;
+    }
+
+    public boolean isHasVolumes() {
+        return hasVolumes;
+    }
+    
+    
+    
     
 }
