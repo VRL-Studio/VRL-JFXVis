@@ -151,6 +151,22 @@ public class UGXsubset {
         this.volumes.add(volume);
     }
     
+    public int[] getVertexArray(){
+        int [] vertexArray = new int[vertices.size()];
+        for (int i = 0; i < vertices.size(); i++) {
+            vertexArray[i] = vertices.get(i);
+        }
+        return vertexArray;
+    }
+    
+    public int[] getEdgeArray(){
+        int [] edgeArray = new int[edges.size()];
+        for (int i = 0; i < edges.size(); i++) {
+            edgeArray[i] = edges.get(i);
+        }
+        return edgeArray;
+    }
+    
     public int[] getFacesArray(){
             int[] facesArray = new int[faces.size()];
             for (int i = 0; i < faces.size(); i++) {

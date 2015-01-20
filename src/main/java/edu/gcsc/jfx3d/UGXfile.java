@@ -71,10 +71,7 @@ public class UGXfile {
     @XStreamImplicit(itemFieldName="subset_handler")
     private ArrayList<UGXsubsetHandler> subset_handler = new ArrayList<UGXsubsetHandler>();
     
-    
-  //  @XStreamImplicit(itemFieldName ="subset")
-  //  private ArrayList<UGXsubset> subsets = new ArrayList<UGXsubset>();
-    
+
     
     public UGXfile(){
         System.out.println("UGX CONSTRUCT");
@@ -221,11 +218,6 @@ public class UGXfile {
 //                                              Integer.parseInt(triangleStringArray[i+2])*3+1, 
 //                                              Integer.parseInt(triangleStringArray[i+2])*3+2);
 
-//                    System.out.println(pp0);
-//                    System.out.println(pp1);
-//                    System.out.println(pp2);
-//                    System.out.println("--------------");
-                    
                     
                     triangles.add(new Triangle(pp0,pp1,pp2,geometryCounter2D++));
                 }

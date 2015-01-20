@@ -48,8 +48,6 @@ public class UGXReader {
     }   catch (FileNotFoundException ex) {
         ex.printStackTrace(System.out);
     }
-        //read();
-        
     }
     
     /*

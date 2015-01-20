@@ -22,10 +22,15 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.Box;
 import javafx.scene.shape.CullFace;
 import javafx.scene.shape.Cylinder;
 import javafx.scene.shape.DrawMode;
+import javafx.scene.shape.Line;
 import javafx.scene.shape.MeshView;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Polyline;
+import javafx.scene.shape.Shape3D;
 import javafx.scene.shape.Sphere;
 import javafx.scene.shape.TriangleMesh;
 import javafx.scene.text.Font;
@@ -77,7 +82,7 @@ public class Main extends Application{
     
     Group ugxGeometry;
     int ugxSubsetCount;
-    int ugxSwitchCounter = 0;
+    int ugxSwitchCounter = -1;
     
     public static void main(String[] args) {
         launch(args);
@@ -149,39 +154,38 @@ public class Main extends Application{
         AmbientLight light3 = new AmbientLight(new Color(0.35,0.35,0.35,1.0));
         root.getChildren().add(light3);
 
-
-       // Group d10 = buildSTL("../JFX3DSample-master/src/main/java/edu/gcsc/jfx3d/STL/hexamail.stl", Color.AQUA, false, true);
-       // Group d10bin = buildSTL("../JFX3DSample-master/src/main/java/edu/gcsc/jfx3d/STL/d10bin.stl", Color.AQUA, false, true);
-       // Group porsche = buildSTL("../JFX3DSample-master/src/main/java/edu/gcsc/jfx3d/STL/porsche.stl", Color.AQUA, false, true);
-        //Group tire = buildSTL("../JFX3DSample-master/src/main/java/edu/gcsc/jfx3d/STL/tire_v.stl", Color.AQUA, false, true);
-       // d10.setTranslateX(-50);
-//        VFX3DUtil.addMouseBehavior(d10, d10, MouseButton.PRIMARY,
-//                Rotate.X_AXIS, Rotate.Y_AXIS);
-//        
-//        VFX3DUtil.addMouseBehavior(d10bin, d10bin, MouseButton.PRIMARY,
-//                Rotate.X_AXIS, Rotate.Y_AXIS);
-//        
-//        VFX3DUtil.addMouseBehavior(porsche, porsche, MouseButton.PRIMARY,
-//                Rotate.X_AXIS, Rotate.Y_AXIS);
-//        
-//        
-//        VFX3DUtil.addMouseBehavior(tire, tire, MouseButton.PRIMARY,
-//                Rotate.X_AXIS, Rotate.Y_AXIS);
-//        
-//        root.getChildren().add(porsche);
-//        root.getChildren().add(d10);
-//        root.getChildren().add(d10bin);
-//        root.getChildren().add(tire);
+/*
+        Group d10 = buildSTL("../JFX3DSample-master/src/main/java/edu/gcsc/jfx3d/STL/hexamail.stl", Color.AQUA, false, true);
+        Group d10bin = buildSTL("../JFX3DSample-master/src/main/java/edu/gcsc/jfx3d/STL/d10bin.stl", Color.AQUA, false, true);
+        Group porsche = buildSTL("../JFX3DSample-master/src/main/java/edu/gcsc/jfx3d/STL/porsche.stl", Color.AQUA, false, true);
+        Group tire = buildSTL("../JFX3DSample-master/src/main/java/edu/gcsc/jfx3d/STL/tire_v.stl", Color.AQUA, false, true);
+        d10.setTranslateX(-50);
+        VFX3DUtil.addMouseBehavior(d10, d10, MouseButton.PRIMARY,
+                Rotate.X_AXIS, Rotate.Y_AXIS);
+        
+        VFX3DUtil.addMouseBehavior(d10bin, d10bin, MouseButton.PRIMARY,
+                Rotate.X_AXIS, Rotate.Y_AXIS);
+        
+        VFX3DUtil.addMouseBehavior(porsche, porsche, MouseButton.PRIMARY,
+                Rotate.X_AXIS, Rotate.Y_AXIS);
+        
+        
+        VFX3DUtil.addMouseBehavior(tire, tire, MouseButton.PRIMARY,
+                Rotate.X_AXIS, Rotate.Y_AXIS);
+        
+        root.getChildren().add(porsche);
+        root.getChildren().add(d10);
+        root.getChildren().add(d10bin);
+        root.getChildren().add(tire);
+        */
         
         UGXReader ugxr = null;
-        String filePath = "../VRL-JFXVis/src/main/java/edu/gcsc/jfx3d/ugx/testobject4.ugx";
+        String filePath = "../VRL-JFXVis/src/main/java/edu/gcsc/jfx3d/ugx/bigSpineBigAppBot.ugx";
   
         ugxGeometry = xbuildUGX(filePath, false, true);
         
         root.getChildren().add(ugxGeometry);
 
-
-       // ugxGeometry = buildUGX("../JFX3DSample-master/src/main/java/edu/gcsc/jfx3d/ugx/testobject.ugx", false, true);
         //root.getChildren().add(dodecahedron);
         VFX3DUtil.addMouseBehavior(ugxGeometry, ugxGeometry, MouseButton.PRIMARY,
                 Rotate.X_AXIS, Rotate.Y_AXIS);
@@ -191,10 +195,7 @@ public class Main extends Application{
         }else{
             ugxSubsetCount = ugxGeometry.getChildren().size();
         }
-
-//        root.getChildren().add(ugxGeometry);
-//        
-        
+      
         return root;
     }
     
@@ -319,10 +320,7 @@ public class Main extends Application{
 
     }
     
-    private Group buildPyramid(float height, float hypotenuse,
-            Color color,
-            boolean ambient,
-            boolean fill) {
+    private Group buildPyramid(float height, float hypotenuse, Color color, boolean ambient, boolean fill) {
         final TriangleMesh mesh = new TriangleMesh();
 
         mesh.getPoints().addAll(
@@ -425,9 +423,6 @@ public class Main extends Application{
         return customGroup;
     }
     
-    /*
-    
-    */
     private Group customBuild2 (int arrayXsize,int arrayYsize,int spacing,Color color, boolean ambient, boolean fill){
         
         float[][] array = new float[arrayXsize][arrayYsize];
@@ -484,7 +479,6 @@ public class Main extends Application{
         return customGroup2;
     }
     
-    
     private Group buildSTL (String filePath,Color color, boolean ambient, boolean fill){
         
         STLReader reader = new STLReader(filePath);
@@ -530,169 +524,7 @@ public class Main extends Application{
 
         return customGroup2;
     }
-    
-    
-    private Group buildUGX (String filePath, boolean ambient, boolean fill){
-        
-        UGXReader reader = new UGXReader(filePath);
-        
-        float[] vertices = reader.getVerticesFloatArray();
-        int[] triangles = reader.getTrianglesFloatArray();
-        int[] tetra = reader.getTetraFloatArray();
-        TriangleMesh mesh = new TriangleMesh();
-        
-      
-        mesh.getPoints().addAll(vertices);
-        mesh.getTexCoords().addAll(0,0);
-        
-        int ssNumber = reader.getSubsetList().size();
-       
-        TriangleMesh[] meshArray = new TriangleMesh[ssNumber];
-        for (int i = 0; i < ssNumber; i++) {
-            meshArray[i] = new TriangleMesh();
-        }
-        int[] ssFaces;
-        int[] ssVolumes;
-       
-        int counter = 0;
-        MeshView[] meshViewArray = new MeshView[ssNumber];
-        for (int i = 0; i < ssNumber; i++) {
-            
-            meshArray[i].getPoints().addAll(vertices);
-            meshArray[i].getTexCoords().addAll(0,0);
-            ssFaces = reader.getSubsetList().get(i).getFacesArray();
-           
-            for (int j = 0; j < ssFaces.length; j++) {
-//                System.out.println(ssFaces[j]);
-            }
-            ssVolumes = reader.getSubsetList().get(i).getVolumeArray();
-            
-            for (int j = 0; j < ssVolumes.length; j++) {
-                //System.out.println(ssVolumes[j]);
-            }
-            //System.out.println("------------------");
-            for (int j = 0; j < ssFaces.length ; j++) {   
-//                System.out.println("triangles " + triangles[ssFaces[j]*3] + "  " + triangles[(ssFaces[j]*3)+1] + "  "+ triangles[(ssFaces[j]*3)+2] + "  "  );   
-//                System.out.println("ssFace " + ssFaces[j]  );   
-                meshArray[i].getFaces().addAll(triangles[ssFaces[j]*3],0, triangles[(ssFaces[j]*3)+1],0,triangles[(ssFaces[j]*3)+2],0);
-               
-            }
-            
-            
-            //System.out.println("-------------------------"  );
-            if (reader.getSubsetList().get(i).getVolumeArray().length > 1) {
-                for (int j = 0; j < ssVolumes.length-1 ; j++) {   
-              //  System.out.println("vertices " + vertices[tetra[ssVolumes[j]*3]] + "  " + vertices[tetra[ssVolumes[j]*3+1]] + "  "+ vertices[tetra[ssVolumes[j]*3+2]] + "  "  );   
-              //  System.out.println("tetra index " + tetra[ssVolumes[j]*3] + "  " + tetra[(ssVolumes[j]*3)+1] + "  "+ tetra[(ssVolumes[j]*3)+2] + "  "  );   
-              //  System.out.println("volume " + ssVolumes[j] );
-              //  meshArray[i].getFaces().addAll( tetra[ssVolumes[j]]*3,0,     (tetra[ssVolumes[j]]*3)+1,0,    (tetra[ssVolumes[j]]*3)+2,0);
-//                meshArray[i].getFaces().addAll((tetra[ssVolumes[j]+1])*3,0, ((tetra[ssVolumes[j]+1])*3)+1,0,((tetra[ssVolumes[j]+1])*3)+2,0);
-//                meshArray[i].getFaces().addAll((tetra[ssVolumes[j]+2])*3,0, ((tetra[ssVolumes[j]+2])*3)+1,0,((tetra[ssVolumes[j]+2])*3)+2,0);
-//                meshArray[i].getFaces().addAll((tetra[ssVolumes[j]+3])*3,0, ((tetra[ssVolumes[j]+3])*3)+1,0,((tetra[ssVolumes[j]+3])*3)+2,0);
-//               
-                    for (int k = 0; k < 4; k++) {
-                         //meshArray[i].getFaces().addAll(triangles[ssVolumes[j]*3],0, triangles[(ssVolumes[j]*3)+1],0,triangles[(ssVolumes[j]*3)+2],0);
-               
-            //          meshArray[i].getFaces().addAll(tetra[ssVolumes[j]+k]*3,0, tetra[(ssVolumes[j]+k)]*3+2,0,tetra[(ssVolumes[j]+k)]*3+1,0);
-            //   meshArray[i].getFaces().addAll(tetra[ssVolumes[j]*3]+1,0, tetra[(ssVolumes[j]*3)]+2,0,tetra[(ssVolumes[j]*3)]+3,0);
-            //    meshArray[i].getFaces().addAll(tetra[ssVolumes[j]*3],0, tetra[(ssVolumes[j]*3)]+3,0,tetra[(ssVolumes[j]*3)]+2,0);
-            //    meshArray[i].getFaces().addAll(tetra[ssVolumes[j]*3],0, tetra[(ssVolumes[j]*3)]+1,0,tetra[(ssVolumes[j]*3)]+3,0);
-                    }
-                
-               //0 2 1, 1 2 3, 0 3 2, 0 1 3
-                    
-                     //meshArray[i].getFaces().addAll(tetra[ssVolumes[j]]*3,0,(((tetra[ssVolumes[j]])*3+1)),0,(((tetra[ssVolumes[j]])*3+2)),0);
-//                     
-//                    meshArray[i].getFaces().addAll((tetra[ssVolumes[j]])*3,0,((tetra[ssVolumes[j]])*3)+1,0,((tetra[ssVolumes[j]])*3)+2);
-//                     meshArray[i].getFaces().addAll((1+tetra[ssVolumes[j]])*3,0,((1+tetra[ssVolumes[j]])*3)+1,0,((1+tetra[ssVolumes[j]])*3)+2);
-//                     meshArray[i].getFaces().addAll((2+tetra[ssVolumes[j]])*3,0,((2+tetra[ssVolumes[j]])*3)+1,0,((2+tetra[ssVolumes[j]])*3)+2);
-//                     meshArray[i].getFaces().addAll((3+tetra[ssVolumes[j]])*3,0,((3+tetra[ssVolumes[j]])*3)+1,0,((3+tetra[ssVolumes[j]])*3)+2);
-//                     
-//                
-               
-//                            System.out.println(k);
-//                            System.out.println("vertex " + tetra[ssVolumes[j]+k]*3 + " " + (((tetra[ssVolumes[j]+k])*3)+1) +
-//                                    " " + (((tetra[ssVolumes[j]+k])*3)+2));
-//                             System.out.println("vertices " + vertices[tetra[ssVolumes[j]+k]*3] + "  " + vertices[tetra[ssVolumes[j]+k]*3+1] +
-//                                     "  "+ vertices[tetra[ssVolumes[j]+k]*3+2] + "  "  );   
-//              
-       
-                  //      meshArray[i].getFaces().addAll(tetra[ssVolumes[j]+k]*3,0,(((tetra[ssVolumes[j]+k])*3+1)),0,(((tetra[ssVolumes[j]+k])*3+2)),0);
-                
-       
-                    
-//                    
-                    
-            }
-              //  System.out.println(" VERTEX ARRAY SIZE OF " + i + " " +meshArray[i].getPoints().size());
-              //  System.out.println(" FACE ARRAY SIZE OF " + i + " " +meshArray[i].getFaces().size());
-            }
-            
-            
-            
-            meshViewArray[i] = new MeshView(meshArray[i]);
-          
-            
-            //System.out.println(ssFaces.length );
-        }
-//        for (int i = 0; i < reader.getSubsetList().get(0).getFacesArray().length; i++) {
-//            System.out.println(reader.getSubsetList().get(0).getFacesArray()[i]);
-//        }
-          
-        
-        //System.out.println(vertices.length + " vlength.  " + ssFaces.length + " Flength  " + triangles.length + " Tlength");
-    
-        MeshView meshView = new MeshView(mesh);
-        //The MeshView allows you to control how the TriangleMesh is rendered
-        
-        Group subsetGroup = new Group();
-        for (int i = 0; i < ssNumber; i++) {
-            subsetGroup.getChildren().add(meshViewArray[i]);
-        }
-        
-        
-        
-            for (int i = 0; i < ssNumber; i++) {
-                Color ssColor = new Color(reader.getSubsetList().get(i).getColor()[0],
-                reader.getSubsetList().get(i).getColor()[1],
-                reader.getSubsetList().get(i).getColor()[2],
-                reader.getSubsetList().get(i).getColor()[3]);
-                
-                PhongMaterial material = new PhongMaterial(ssColor);
-                meshViewArray[i].setMaterial(material);
-        
-            
-            
-        }
-        if (ambient) {
-            for (int i = 0; i < ssNumber; i++) {
-                
-                AmbientLight light = new AmbientLight(Color.WHITE);
-                light.getScope().add(meshViewArray[i]);
-                subsetGroup.getChildren().add(light);
-            }
-            
-        }
-        if(fill) { 
-            for (int i = 0; i < ssNumber; i++) {
-                meshViewArray[i].setDrawMode(DrawMode.FILL);
-            }
-            
-        } else {
-            for (int i = 0; i < ssNumber; i++) {
-                meshViewArray[i].setDrawMode(DrawMode.LINE);
-            }
-        }
-         //Removing culling to show back lines
-        
-        for (int i = 0; i < ssNumber; i++) {
-                meshViewArray[i].setCullFace(CullFace.NONE);
-            }
-        
-        
-        return subsetGroup;
-    }
-    
+
     /*Creates a 3D object from a ugx file using the xStream library */
     private Group xbuildUGX (String filePath, boolean ambient, boolean fill){
         
@@ -702,6 +534,7 @@ public class Main extends Application{
         
         
         float[] vertices = ugxfile.getGlobalVerticesArray();
+        ArrayList<Edge> edges = ugxfile.getEdges();
         ArrayList<Triangle> triangles = ugxfile.getTriangles();
         ArrayList<Quadrilateral> quadrilaterals = ugxfile.getQuadrilaterals();
         ArrayList<Tetrahedron> tetrahedrons = ugxfile.getTetrahedrons();
@@ -710,6 +543,7 @@ public class Main extends Application{
         ArrayList<Pyramid> pyramids = ugxfile.getPyramids();
         int[] tetra = ugxfile.getTetraedronsArray();
         TriangleMesh mesh = new TriangleMesh();
+        
         
       
         ArrayList<Geometry2D> geometry2DList = new ArrayList<Geometry2D>();
@@ -761,25 +595,60 @@ public class Main extends Application{
         for (int i = 0; i < ssNumber; i++) {
             meshArray[i] = new TriangleMesh();
         }
+        int[] ssVertices;
+        int[] ssEdges;
         int[] ssFaces;
         int[] ssVolumes;
+        
        
-        int counter2DStruc = 0;
         MeshView[] meshViewArray = new MeshView[ssNumber];
+        Group subsetGroup = new Group();
         for (int i = 0; i < ssNumber; i++) {
 
             meshArray[i].getPoints().addAll(vertices);
             meshArray[i].getTexCoords().addAll(0,0);
+            Group vertexGroup = new Group();
+            Group edgesGroup = new Group();
+            
+            ssVertices = ugxfile.getSubset_handler().get(0).getSubsets().get(i).getVertexArray();
+            
+            ssEdges = ugxfile.getSubset_handler().get(0).getSubsets().get(i).getEdgeArray();
             
             ssFaces = ugxfile.getSubset_handler().get(0).getSubsets().get(i).getFacesArray();
            
-
             ssVolumes = ugxfile.getSubset_handler().get(0).getSubsets().get(i).getVolumeArray();
+            
+            
+            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVertices()) {
+                Sphere[] sphereArray = new Sphere[ssVertices.length];
+                
+                for (int j = 0; j < ssVertices.length; j++) {
+                    sphereArray[j] = new Sphere(0.025);
+                    sphereArray[j].setTranslateX(vertices[ssVertices[j]*3]);
+                    sphereArray[j].setTranslateY(vertices[ssVertices[j]*3+1]);
+                    sphereArray[j].setTranslateZ(vertices[ssVertices[j]*3+2]);
+                    sphereArray[j].setDrawMode(DrawMode.FILL);
+                    sphereArray[j].setCullFace(CullFace.NONE);
+                    PhongMaterial sphereMat = new PhongMaterial(new Color(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[0],
+                                                                ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[1],
+                                                                ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[2],
+                                                                Math.abs(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[3])));
+                    sphereArray[j].setMaterial(sphereMat);
+                    //System.out.println(j + " " + vertices[j] + " " + vertices[j+1]+ " " + vertices[j+2]);
+                    vertexGroup.getChildren().add(sphereArray[j]);
+                }
+            }
+            
+            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasEdges()) {
+                Line[] lineArray = new Line[ssEdges.length];
+                for (int j = 0; j < ssEdges.length; j++) {
+
+                }
+            }
             
 
             if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasFaces()) {
                 System.out.println(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getSubsetName() + " has faces");
-                int facesLength = 0;
                 
                 for (int j = 0; j < ssFaces.length; j++) {
                     meshArray[i].getFaces().addAll(geometry2DList.get(ssFaces[j]).getFacesArray());
@@ -792,96 +661,9 @@ public class Main extends Application{
                 for (int j = 0; j < ssVolumes.length; j++) {
                     meshArray[i].getFaces().addAll(geometry3DList.get(ssVolumes[j]).getFacesArray());
                 }
-                
             }
                 
-                //-------------------------------------------------------------------------------------------------------------------------------------
-//                
-//                if(ugxfile.containsTriangles() && (ssFaces[0]<triangles.size())){
-//                    System.out.println("Building triangles for " + ugxfile.getSubset_handler().get(0).getSubsets().get(i).getSubsetName() + " subset.");
-//                
-//                    facesLength = ssFaces.length;
-//                    
-//                    if (ugxfile.containsQuadrilaterals()) {
-//                        if (ssFaces[ssFaces.length - 1] > triangles.size()) {
-//                            facesLength = triangles.size();
-//                        }
-//                    }
-//                    
-//                    for (int j = 0; j < facesLength; j++) {
-//                        
-////                        System.out.println(vertices[triangles.get(ssFaces[j]).getNodes()[0]] + "  " + triangles.get(ssFaces[j]).getNodes()[0]);
-////                        System.out.println(vertices[triangles.get(ssFaces[j]).getNodes()[1]] + "  " + triangles.get(ssFaces[j]).getNodes()[1]);
-////                        System.out.println(vertices[triangles.get(ssFaces[j]).getNodes()[2]] + "  " + triangles.get(ssFaces[j]).getNodes()[2]);
-//
-////                        System.out.println("-------" + counter++ );
-//                    
-//                          
-//                        //meshArray[i].getFaces().addAll(triangles[ssFaces[j] * 3 + 2], 0, triangles[(ssFaces[j] * 3) + 1], 0, triangles[(ssFaces[j] * 3)], 0);
-//                       
-//                        meshArray[i].getFaces().addAll(geometry2DList.get(ssFaces[j]).getFacesArray());
-//                        counter2DStruc++;
-//                    }
-//            // 2, 1, 0
-//                    // 2,3,1
-//                }
-//                
-//                if(ugxfile.containsQuadrilaterals() && (facesLength != ssFaces.length)){
-//                    System.out.println("Building quadrilaterals for " + ugxfile.getSubset_handler().get(0).getSubsets().get(i).getSubsetName() + " subset.");
-//                    
-//                    
-//                    int[] ssRestFaces = ssFaces;
-//                    if (ugxfile.containsTriangles()) {
-//                        
-//                        
-//                      
-//                        
-//                        
-//                           ssRestFaces = new int[ssFaces.length - facesLength];
-//
-//                        for (int j = 0; j < ssRestFaces.length; j++) {
-//                            ssRestFaces[j] = ssFaces[facesLength + j];
-//                            //System.out.print(ssRestFaces[j] + "  ");
-//                        }
-//                        
-//                    }
-//                    
-//                    
-//                    for (int j = 0; j < quadrilaterals.size(); j++) {
-//                        
-////                        System.out.println(quadrilaterals.get(ssRestFaces[j]-counter2DStruc).getNodes()[0]);
-////                        System.out.println(quadrilaterals.get(ssRestFaces[j]-counter2DStruc).getNodes()[1]);
-////                        System.out.println(quadrilaterals.get(ssRestFaces[j]-counter2DStruc).getNodes()[2]);
-////                        System.out.println(quadrilaterals.get(ssRestFaces[j]-counter2DStruc).getNodes()[3]);
-////                        System.out.println("--------------------------------------" + j);
-//                        
-//                        System.out.println(geometry2DList.size());
-//                        meshArray[i].getFaces().addAll(geometry2DList.get(ssFaces[counter2DStruc]).getFacesArray());
-//
-//                        counter2DStruc++;
-//                    }
-//                }
-                
-                //----------------------------------------------------------------------------------------------------------------------------
-                
-                
             
-            
-            if (ssVolumes.length > 0) {
-//                for (int j = 0; j < ssVolumes.length ; j++) {   
-//       
-//                      meshArray[i].getFaces().addAll(tetra[ssVolumes[j]*4],0, tetra[(ssVolumes[j]*4)+2],0,tetra[(ssVolumes[j]*4)+1],0);
-//                      meshArray[i].getFaces().addAll(tetra[ssVolumes[j]*4+1],0, tetra[(ssVolumes[j]*4)+2],0,tetra[(ssVolumes[j]*4)+3],0);
-//                      meshArray[i].getFaces().addAll(tetra[ssVolumes[j]*4],0, tetra[(ssVolumes[j]*4)+3],0,tetra[(ssVolumes[j]*4)+2],0);
-//                      meshArray[i].getFaces().addAll(tetra[ssVolumes[j]*4],0, tetra[(ssVolumes[j]*4)+1],0,tetra[(ssVolumes[j]*4)+3],0);
-//               
-//               //0 2 1, 1 2 3, 0 3 2, 0 1 3
-//
-//                
-//            }
-                
-              
-            }
             System.out.println(" VERTEX ARRAY SIZE OF " + i + " " +meshArray[i].getPoints().size());
             System.out.println(" FACE ARRAY SIZE OF " + i + " " +meshArray[i].getFaces().size());
             
@@ -890,21 +672,30 @@ public class Main extends Application{
             meshViewArray[i] = new MeshView(meshArray[i]);
           
             
+            
+            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVertices() && ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasEdges() ) {
+                Group fusedGroup = new Group(vertexGroup,edgesGroup,meshViewArray[i]);
+                subsetGroup.getChildren().addAll(fusedGroup);
+            } else if(ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVertices()){
+                Group fusedGroup = new Group(vertexGroup,meshViewArray[i]);
+                subsetGroup.getChildren().addAll(fusedGroup);
+            }else if(ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasEdges()){
+                Group fusedGroup = new Group(edgesGroup,meshViewArray[i]);
+                subsetGroup.getChildren().addAll(fusedGroup);
+            }
+            else{
+                subsetGroup.getChildren().add(meshViewArray[i]);
+            }
             //System.out.println(ssFaces.length );
         }
-//        for (int i = 0; i < reader.getSubsetList().get(0).getFacesArray().length; i++) {
-//            System.out.println(reader.getSubsetList().get(0).getFacesArray()[i]);
-//        }
-          
+
         
-        //System.out.println(vertices.length + " vlength.  " + ssFaces.length + " Flength  " + triangles.length + " Tlength");
-    
-        MeshView meshView = new MeshView(mesh);
         //The MeshView allows you to control how the TriangleMesh is rendered
         
-        Group subsetGroup = new Group();
+        
         for (int i = 0; i < ssNumber; i++) {
-            subsetGroup.getChildren().add(meshViewArray[i]);
+            
+            //subsetGroup.getChildren().add(meshViewArray[i]);
         }
         
         
@@ -950,6 +741,4 @@ public class Main extends Application{
         
         return subsetGroup;
     }
-    
-    
 }
