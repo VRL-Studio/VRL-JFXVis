@@ -54,7 +54,7 @@ public class Main extends Application{
   
 
     private final double cameraModifier = 20.0;
-    private final double cameraQuantity = 0.10;
+    private final double cameraQuantity = 0.50;
     private final double sceneWidth = 600;
     private final double sceneHeight = 600;
     private double mouseXold = 0;
@@ -67,6 +67,7 @@ public class Main extends Application{
     double textTranslateX = (-sceneWidth/8);
     double textTranslateY = (-sceneWidth/10);
     
+    String[] subsetNameArray;
     Scene scene;
     
     private double scenex, sceney = 0;
@@ -179,23 +180,20 @@ public class Main extends Application{
         root.getChildren().add(tire);
         */
         
-        UGXReader ugxr = null;
         String filePath = "../VRL-JFXVis/src/main/java/edu/gcsc/jfx3d/ugx/bigSpineBigAppBot.ugx";
-  
-        ugxGeometry = xbuildUGX(filePath, false, false);
+        UGXReader ugxr = new UGXReader(filePath);
+        ugxGeometry = ugxr.xbuildUGX(false, false);
+        subsetNameArray = ugxr.getSubssetNameArray();
         
         root.getChildren().add(ugxGeometry);
 
-        //root.getChildren().add(dodecahedron);
         VFX3DUtil.addMouseBehavior(ugxGeometry, ugxGeometry, MouseButton.PRIMARY,
                 Rotate.X_AXIS, Rotate.Y_AXIS);
+        VFX3DUtil.addMouseBehavior(ugxGeometry, ugxGeometry, MouseButton.SECONDARY,
+                Rotate.X_AXIS, Rotate.Z_AXIS);
         
-        if (ugxGeometry.getChildren().get(ugxGeometry.getChildren().size()-1).toString().contains("Light")) {
-            ugxSubsetCount = ugxGeometry.getChildren().size()/2;
-        }else{
-            ugxSubsetCount = ugxGeometry.getChildren().size();
-        }
-      
+        ugxSubsetCount = ugxr.getNumberOfSubsets();
+        
         return root;
     }
     
@@ -251,7 +249,7 @@ public class Main extends Application{
                 for (int i = 0; i < ugxSubsetCount; i++) {
                     if (i == ugxSwitchCounter) {
                         ugxGeometry.getChildren().get(i).setOpacity(1);
-                        System.out.println(ugxSwitchCounter);
+                        System.out.println("Currently shown subset: " + ugxSwitchCounter +" of "+ (ugxSubsetCount-1) + ", "  + subsetNameArray[ugxSwitchCounter]);
                     }
                     else{
                         ugxGeometry.getChildren().get(i).setOpacity(0);
@@ -261,10 +259,11 @@ public class Main extends Application{
             }
             
             if (keycode == KeyCode.SUBTRACT) {
-                ugxSwitchCounter = 0;
+                ugxSwitchCounter = -1;
                 for (int i = 0; i < ugxSubsetCount; i++) {
                     ugxGeometry.getChildren().get(i).setOpacity(1);
                 }
+                System.out.println("Currently shown subset: All");
             }
             
             
@@ -525,237 +524,5 @@ public class Main extends Application{
         return customGroup2;
     }
 
-    /*Creates a 3D object from a ugx file using the xStream library */
-    private Group xbuildUGX (String filePath, boolean ambient, boolean fill){
-        
-        UGXReader reader = new UGXReader(filePath);
-        
-        UGXfile ugxfile = reader.xread();
-        
-        
-        float[] vertices = ugxfile.getGlobalVerticesArray();
-        ArrayList<Edge> edges = ugxfile.getEdges();
-        ArrayList<Triangle> triangles = ugxfile.getTriangles();
-        ArrayList<Quadrilateral> quadrilaterals = ugxfile.getQuadrilaterals();
-        ArrayList<Tetrahedron> tetrahedrons = ugxfile.getTetrahedrons();
-        ArrayList<Hexahedron> hexahedrons = ugxfile.getHexahedrons();
-        ArrayList<Prism> prisms = ugxfile.getPrisms();
-        ArrayList<Pyramid> pyramids = ugxfile.getPyramids();
-        TriangleMesh mesh = new TriangleMesh();
-        
-      
-        ArrayList<Geometry2D> geometry2DList = new ArrayList<Geometry2D>();
-        ArrayList<Geometry3D> geometry3DList = new ArrayList<Geometry3D>();
-        
-        if (ugxfile.containsTriangles()) {
-            for (int i = 0; i < triangles.size(); i++) {
-                geometry2DList.add(triangles.get(i));
-            }
-        }
-        
-        if (ugxfile.containsQuadrilaterals()) {
-            for (int i = 0; i < quadrilaterals.size(); i++) {
-                geometry2DList.add(quadrilaterals.get(i));
-            }
-        }
-        
-        if (ugxfile.containsTetrahedrons()) {
-            for (int i = 0; i < tetrahedrons.size(); i++) {
-                geometry3DList.add(tetrahedrons.get(i));
-            }
-        }
-        
-        if (ugxfile.containsHexahedrons()) {
-            for (int i = 0; i < hexahedrons.size(); i++) {
-                geometry3DList.add(hexahedrons.get(i));
-            }
-        }
-        
-        if (ugxfile.containsPrisms()) {
-            for (int i = 0; i < prisms.size(); i++) {
-                geometry3DList.add(prisms.get(i));
-            }
-        }
-        
-        if (ugxfile.containsPyramids()) {
-            for (int i = 0; i < pyramids.size(); i++) {
-                geometry3DList.add(pyramids.get(i));
-            }
-        }
-        
-        mesh.getPoints().addAll(vertices);
-        mesh.getTexCoords().addAll(0,0);
-        
-        
-        int ssNumber = ugxfile.getSubset_handler().get(0).getSubsets().size();
-       
-        TriangleMesh[] meshArray = new TriangleMesh[ssNumber];
-        for (int i = 0; i < ssNumber; i++) {
-            meshArray[i] = new TriangleMesh();
-        }
-        int[] ssVertices;
-        int[] ssEdges;
-        int[] ssFaces;
-        int[] ssVolumes;
-        
-       
-        MeshView[] meshViewArray = new MeshView[ssNumber];
-        Group subsetGroup = new Group();
-        for (int i = 0; i < ssNumber; i++) {
-
-            meshArray[i].getPoints().addAll(vertices);
-            meshArray[i].getTexCoords().addAll(0,0);
-            Group vertexGroup = new Group();
-            Group edgesGroup = new Group();
-            
-            ssVertices = ugxfile.getSubset_handler().get(0).getSubsets().get(i).getVertexArray();
-            
-            ssEdges = ugxfile.getSubset_handler().get(0).getSubsets().get(i).getEdgeArray();
-            
-            ssFaces = ugxfile.getSubset_handler().get(0).getSubsets().get(i).getFacesArray();
-           
-            ssVolumes = ugxfile.getSubset_handler().get(0).getSubsets().get(i).getVolumeArray();
-            
-            // start of vertex visualisation
-            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVertices()) {
-                Sphere[] sphereArray = new Sphere[ssVertices.length];
-                
-                for (int j = 0; j < ssVertices.length; j++) {
-                    sphereArray[j] = new Sphere(0.025);
-                    sphereArray[j].setTranslateX(vertices[ssVertices[j]*3]);
-                    sphereArray[j].setTranslateY(vertices[ssVertices[j]*3+1]);
-                    sphereArray[j].setTranslateZ(vertices[ssVertices[j]*3+2]);
-                    PhongMaterial sphereMat = new PhongMaterial(new Color(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[0],
-                                                                ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[1],
-                                                                ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[2],
-                                                                Math.abs(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[3])));
-                    sphereArray[j].setMaterial(sphereMat);
-                    vertexGroup.getChildren().add(sphereArray[j]);
-                }     
-            }// end of vertex visualisation
-            
-            
-            // start of edge visualisation
-            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasEdges()) {
-                TriangleMesh edgesMesh = new TriangleMesh();
-                edgesMesh.getTexCoords().addAll(0,0);
-                ArrayList<Prism> edgesPrisms = new ArrayList<Prism>();
-                float width = 0.01f;
-                
-                for (int j = 0; j < ssEdges.length; j++) {
-                    
-                    float bottomXexact = edges.get(ssEdges[j]).getVertices()[0].getX();
-                    float bottomYexact = edges.get(ssEdges[j]).getVertices()[0].getY();
-                    float bottomZ = edges.get(ssEdges[j]).getVertices()[0].getZ();
-                    
-                    float topXexact = edges.get(ssEdges[j]).getVertices()[1].getX();
-                    float topYexact = edges.get(ssEdges[j]).getVertices()[1].getY();
-                    float topZ = edges.get(ssEdges[j]).getVertices()[1].getZ();
-                    
-                    
-                        edgesMesh.getPoints().addAll(bottomXexact - width, bottomYexact - width, bottomZ-width);
-                        edgesMesh.getPoints().addAll(bottomXexact + width, bottomYexact - width, bottomZ);
-                        edgesMesh.getPoints().addAll(bottomXexact, bottomYexact + width, bottomZ);
-                        
-                        edgesMesh.getPoints().addAll(topXexact - width, topYexact - width, topZ-width);
-                        edgesMesh.getPoints().addAll(topXexact + width, topYexact - width, topZ);
-                        edgesMesh.getPoints().addAll(topXexact, topYexact + width, topZ);
-                                     
-                    
-                    edgesPrisms.add(new Prism(j*6, j*6+2, j*6+1, j*6+3, j*6+5, j*6+4, j));
-                    edgesMesh.getFaces().addAll(edgesPrisms.get(j).getFacesArray());
-
-                }
-                MeshView edgesMeshView = new MeshView(edgesMesh);
-                PhongMaterial edgeMat = new PhongMaterial(new Color(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[0],
-                                                                ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[1],
-                                                                ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[2],
-                                                                Math.abs(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[3])));
-                edgesMeshView.setMaterial(edgeMat);
-                //edgesMeshView.setDrawMode(DrawMode.FILL);
-                //edgesMeshView.setCullFace(CullFace.NONE);
-     
-                edgesGroup.getChildren().addAll(edgesMeshView);
-                
-            } // end of edge visualisation
-            
-            // start of face visualisation
-            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasFaces()) {
-                
-                for (int j = 0; j < ssFaces.length; j++) {
-                    meshArray[i].getFaces().addAll(geometry2DList.get(ssFaces[j]).getFacesArray());
-                }
-            } // end of face visualisation
-            
-            // start of volume visualisation
-            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVolumes()){
-                
-                for (int j = 0; j < ssVolumes.length; j++) {
-                    meshArray[i].getFaces().addAll(geometry3DList.get(ssVolumes[j]).getFacesArray());
-                }
-            }// end of volume visualisation
-                
-            
-           // System.out.println(" VERTEX ARRAY SIZE OF " + i + " " +meshArray[i].getPoints().size());
-           // System.out.println(" FACE ARRAY SIZE OF " + i + " " +meshArray[i].getFaces().size());
-            
-            meshViewArray[i] = new MeshView(meshArray[i]);
-          
-            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVertices() && ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasEdges() ) {
-                Group fusedGroup = new Group(vertexGroup,edgesGroup,meshViewArray[i]);
-                subsetGroup.getChildren().addAll(fusedGroup);
-                
-            } else if(ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVertices()){
-                Group fusedGroup = new Group(vertexGroup,meshViewArray[i]);
-                subsetGroup.getChildren().addAll(fusedGroup);
-                
-            }else if(ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasEdges()){
-                Group fusedGroup = new Group(edgesGroup,meshViewArray[i]);
-                subsetGroup.getChildren().addAll(fusedGroup);
-                
-            }
-            else{
-                subsetGroup.getChildren().add(meshViewArray[i]);
-            }
-        }
-        
-        //The MeshView allows you to control how the TriangleMesh is rendered
-           
-            for (int i = 0; i < ssNumber; i++) {
-                
-                Color ssColor = new Color(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[0],
-                ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[1],
-                ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[2],
-                Math.abs(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[3]));
-                
-                PhongMaterial material = new PhongMaterial(ssColor);
-                meshViewArray[i].setMaterial(material);
     
-        }
-        if (ambient) {
-            for (int i = 0; i < ssNumber; i++) {
-                
-                AmbientLight light = new AmbientLight(Color.WHITE);
-                light.getScope().add(meshViewArray[i]);
-                subsetGroup.getChildren().add(light);
-            }
-        }
-        if(fill) { 
-            for (int i = 0; i < ssNumber; i++) {
-                meshViewArray[i].setDrawMode(DrawMode.FILL);
-            }
-            
-        } else {
-            for (int i = 0; i < ssNumber; i++) {
-                meshViewArray[i].setDrawMode(DrawMode.LINE);
-            }
-        }
-         //Removing culling to show back lines
-        
-        for (int i = 0; i < ssNumber; i++) {
-                meshViewArray[i].setCullFace(CullFace.NONE);
-            }
-        
-        return subsetGroup;
-    }
 }

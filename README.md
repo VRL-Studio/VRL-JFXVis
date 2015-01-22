@@ -1,7 +1,9 @@
-JFX3DSample
+VRL-JFXVis
 ===========
 
-JavaFX 3D sample application.
+Visualization Plugin for VRL
+
+Visualises .ugx files in Java using JavaFX3D! (Work in progress)
 
 ![](/resources/img/sample.jpg)
 
@@ -29,14 +31,13 @@ Navigate to the [Gradle](http://www.gradle.org/) project (e.g., `path/to/JFX3DSa
 #### Windows (CMD)
 
     gradlew run
-VRL-JFXVis
-==========
 
-Visualization Plugin for VRL
+#### Controls
 
-Controls:
--Cycle through subsets : +
+- Rotate the object with your mouse button(left button to rotate x,y axis, right button to rotate x,z axis)
 
--Show all subsets : -
+- Cycle through subsets : +
 
--Move camera : w,a,s,d
+- Show all subsets : -
+
+- Move camera : w,a,s,d (hold down shift to move faster)
