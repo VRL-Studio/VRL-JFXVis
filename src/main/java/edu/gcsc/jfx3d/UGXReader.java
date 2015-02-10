@@ -15,9 +15,15 @@ import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.event.EventType;
 import javafx.scene.AmbientLight;
 import javafx.scene.Group;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.Material;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.CullFace;
 import javafx.scene.shape.DrawMode;
@@ -38,6 +44,12 @@ public class UGXReader {
     private ArrayList<Integer> tetra = new ArrayList<Integer>();
     private ArrayList<UGXsubset> subsetList = new ArrayList<UGXsubset>();
     private UGXsubsetHandler subsetHandler;
+    private ArrayList<Node> nodeSelection = new ArrayList<Node>();
+    private ArrayList<Material> nodeSelectionMaterial = new ArrayList<Material>();
+    private Node prevPickRes;
+    
+    
+    boolean strgPressed = false; 
     
     public UGXReader(String filePath){
         
@@ -351,12 +363,11 @@ public class UGXReader {
         MeshView[] meshViewArray = new MeshView[ssNumber];
         Group subsetGroup = new Group();
         for (int i = 0; i < ssNumber; i++) {
-
+            
             meshArray[i].getPoints().addAll(vertices);
             meshArray[i].getTexCoords().addAll(0,0);
             Group vertexGroup = new Group();
             Group edgesGroup = new Group();
-            
             ssVertices = ugxfile.getSubset_handler().get(0).getSubsets().get(i).getVertexArray();
             
             ssEdges = ugxfile.getSubset_handler().get(0).getSubsets().get(i).getEdgeArray();
@@ -370,7 +381,7 @@ public class UGXReader {
                 Sphere[] sphereArray = new Sphere[ssVertices.length];
                 
                 for (int j = 0; j < ssVertices.length; j++) {
-                    sphereArray[j] = new Sphere(0.025);
+                    sphereArray[j] = new Sphere(0.075);
                     sphereArray[j].setTranslateX(vertices[ssVertices[j]*3]);
                     sphereArray[j].setTranslateY(vertices[ssVertices[j]*3+1]);
                     sphereArray[j].setTranslateZ(vertices[ssVertices[j]*3+2]);
@@ -380,7 +391,8 @@ public class UGXReader {
                                                                 Math.abs(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[3])));
                     sphereArray[j].setMaterial(sphereMat);
                     vertexGroup.getChildren().add(sphereArray[j]);
-                }     
+                }
+                addVertexInteraction(vertexGroup);
             }// end of vertex visualisation
             
             
@@ -404,14 +416,14 @@ public class UGXReader {
                     //create triangle around the first Node
                         edgesMesh.getPoints().addAll(bottomXexact - width, bottomYexact - width, bottomZ-width);
                         edgesMesh.getPoints().addAll(bottomXexact + width, bottomYexact - width, bottomZ);
-                        edgesMesh.getPoints().addAll(bottomXexact, bottomYexact + width, bottomZ);
+                        edgesMesh.getPoints().addAll(bottomXexact, bottomYexact + width, bottomZ+width);
                     //create triangle around the second Node
                         edgesMesh.getPoints().addAll(topXexact - width, topYexact - width, topZ-width);
                         edgesMesh.getPoints().addAll(topXexact + width, topYexact - width, topZ);
-                        edgesMesh.getPoints().addAll(topXexact, topYexact + width, topZ);
+                        edgesMesh.getPoints().addAll(topXexact, topYexact + width, topZ+width);
                                      
                     //creat a prism from the two triagnles and add the faces
-                    edgesPrisms.add(new Prism(j*6, j*6+2, j*6+1, j*6+3, j*6+5, j*6+4, j));
+                    edgesPrisms.add(new Prism(j*6, j*6+1, j*6+2, j*6+3, j*6+4, j*6+5, j));
                     edgesMesh.getFaces().addAll(edgesPrisms.get(j).getFacesArray());
 
                 }
@@ -422,14 +434,14 @@ public class UGXReader {
                                                                 Math.abs(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[3])));
                 edgesMeshView.setMaterial(edgeMat);
                 //edgesMeshView.setDrawMode(DrawMode.FILL);
-                //edgesMeshView.setCullFace(CullFace.NONE);
+                edgesMeshView.setCullFace(CullFace.NONE);
      
                 edgesGroup.getChildren().addAll(edgesMeshView);
                 
             } // end of edge visualisation
             
             // start of face visualisation
-            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasFaces()) {
+            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasFaces() && fill) {
                 
                 for (int j = 0; j < ssFaces.length; j++) {
                     meshArray[i].getFaces().addAll(geometry2DList.get(ssFaces[j]).getFacesArray());
@@ -437,7 +449,7 @@ public class UGXReader {
             } // end of face visualisation
             
             // start of volume visualisation
-            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVolumes()){
+            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVolumes() && fill){
                 
                 for (int j = 0; j < ssVolumes.length; j++) {
                     meshArray[i].getFaces().addAll(geometry3DList.get(ssVolumes[j]).getFacesArray());
@@ -504,6 +516,62 @@ public class UGXReader {
         return subsetGroup;
     }
     
+    private void addVertexInteraction(Group vGroup) {
+
+        vGroup.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseClick -> {
+            Node pickRes = mouseClick.getPickResult().getIntersectedNode();
+            Sphere sphr = (Sphere) pickRes;
+            if (!nodeSelection.contains(pickRes)) {
+
+                if (!Main.strgPressedDown) { // strg not pressed 
+                    for (int i = 0; i < nodeSelection.size(); i++) {
+
+                        ((Sphere) nodeSelection.get(i)).setMaterial(nodeSelectionMaterial.get(i));
+                    }
+                    nodeSelection.clear();
+                    nodeSelectionMaterial.clear();
+                }
+
+                nodeSelection.add(pickRes);
+                nodeSelectionMaterial.add(((Sphere) pickRes).getMaterial());
+                System.out.println("Elements in NodeSelection :");
+                for (int i = 0; i < nodeSelection.size(); i++) {
+                    System.out.print(nodeSelection.get(i) + "  ");
+                    System.out.println(nodeSelection.get(i).getTranslateX() + " " 
+                            + nodeSelection.get(i).getTranslateY() + " " 
+                            + nodeSelection.get(i).getTranslateZ());
+                }
+                Color col = new Color(1, 1, 1, 1);
+                PhongMaterial mat = new PhongMaterial(col);
+                ((Sphere) pickRes).setMaterial(mat);
+            } else {
+
+                int index = nodeSelection.indexOf(pickRes);
+                ((Sphere) nodeSelection.get(index)).setMaterial(nodeSelectionMaterial.get(index));
+                nodeSelection.remove(index);
+                nodeSelectionMaterial.remove(index);
+                if (!Main.strgPressedDown) { // strg not pressed 
+                    for (int i = 0; i < nodeSelection.size(); i++) {
+
+                        ((Sphere) nodeSelection.get(i)).setMaterial(nodeSelectionMaterial.get(i));
+                    }
+                    nodeSelection.clear();
+                    nodeSelectionMaterial.clear();
+                }
+
+                System.out.println("Elements in NodeSelection :");
+                for (int i = 0; i < nodeSelection.size(); i++) {
+                    System.out.print(nodeSelection.get(i) + "  ");
+                    System.out.println(nodeSelection.get(i).getTranslateX() + " " 
+                            + nodeSelection.get(i).getTranslateY() + " " 
+                            + nodeSelection.get(i).getTranslateZ());
+                }
+
+            }
+        }
+        );
+    }
+
     public float[] getVerticesFloatArray(){
         float[] verticesArray = new float[vertices.size()];
         for (int i = 0; i < vertices.size(); i++) {

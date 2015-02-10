@@ -159,6 +159,9 @@ public class UGXfile {
     
     
     public void convertReaderStringToData(){
+        this.globalVertices = new ArrayList<Float>();
+        this.edges = new ArrayList<Edge>();
+        this.triangles = new ArrayList<Triangle>();
         this.quadrilaterals = new ArrayList<Quadrilateral>();
         this.tetrahedrons = new ArrayList<Tetrahedron>();
         this.hexahedrons = new ArrayList<Hexahedron>();

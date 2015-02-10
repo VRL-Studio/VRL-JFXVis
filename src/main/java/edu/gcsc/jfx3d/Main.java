@@ -2,6 +2,7 @@ package edu.gcsc.jfx3d;
 
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import java.util.ArrayList;
+import java.util.function.Predicate;
 import javafx.application.Application;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -20,6 +21,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.PickResult;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
@@ -69,6 +71,7 @@ public class Main extends Application{
     
     String[] subsetNameArray;
     Scene scene;
+    Group pickedGroup;
     
     private double scenex, sceney = 0;
     private double fixedXAngle, fixedYAngle = 0;
@@ -80,6 +83,7 @@ public class Main extends Application{
     
     Text t;
     
+    public static boolean strgPressedDown = false;
     
     Group ugxGeometry;
     int ugxSubsetCount;
@@ -97,7 +101,7 @@ public class Main extends Application{
 
             // Create camera
             PerspectiveCamera camera = new PerspectiveCamera(true);
-            camera.setFarClip(1000);
+            camera.setFarClip(100000);
 
             // and position it
             camera.getTransforms().addAll(
@@ -266,6 +270,9 @@ public class Main extends Application{
                 System.out.println("Currently shown subset: All");
             }
             
+            if (keycode == KeyCode.CONTROL) {
+                strgPressedDown = true;
+            }
             
             if(keycode == KeyCode.T){
                 camera.setRotationAxis(Rotate.X_AXIS);
@@ -286,8 +293,18 @@ public class Main extends Application{
                 
             }
         });
+ 
+        scene.setOnKeyReleased(releaseEvent -> {
+
+            KeyCode keycode = releaseEvent.getCode();
+
+            if (keycode == KeyCode.CONTROL) {
+                strgPressedDown = false;
+            }
+
+        });
     }
-    
+
     private void handleMouse(Scene scene,PerspectiveCamera camera){
         
         Rotate xRotate = new Rotate(0, 0, 0, 0, Rotate.X_AXIS);
@@ -314,11 +331,22 @@ public class Main extends Application{
                 mouseXold = mouseXnew;
                 mouseYold = mouseYnew;
             }
-        }
+        }     
+        );
+        
+       scene.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseClick -> {
+           //Node pickRes = mouseClick.getPickResult().getIntersectedNode();
+           
+           //System.out.println("pickRes "+pickRes );
+
+            
+           
+        }     
         );
 
     }
     
+
     private Group buildPyramid(float height, float hypotenuse, Color color, boolean ambient, boolean fill) {
         final TriangleMesh mesh = new TriangleMesh();
 
