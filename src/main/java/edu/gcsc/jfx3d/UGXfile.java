@@ -193,7 +193,7 @@ public class UGXfile {
                                               globalVertices.get(Integer.parseInt(edgesStringArray[i+1])*3+1), 
                                               globalVertices.get(Integer.parseInt(edgesStringArray[i+1])*3+2));
                     
-                    edges.add(new Edge(p0, p1));
+                    edges.add(new Edge(p0, p1,i));
                 }
                 containsEdges = true;
             }
