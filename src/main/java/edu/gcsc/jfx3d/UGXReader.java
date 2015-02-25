@@ -16,13 +16,14 @@ import java.util.HashMap;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javafx.event.EventType;
+import javafx.geometry.Point3D;
 import javafx.scene.AmbientLight;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.PickResult;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Material;
 import javafx.scene.paint.PhongMaterial;
@@ -50,11 +51,16 @@ public class UGXReader {
     private ArrayList<Node> edgeNodeSelection = new ArrayList<Node>();
     private ArrayList<Material> vertexNodeSelectionMaterial = new ArrayList<Material>();
     private ArrayList<Material> edgeNodeSelectionMaterial = new ArrayList<Material>();
+    private ArrayList<Node> faceNodeSelection = new ArrayList<>();
+    private ArrayList<Material> faceNodeSelectionMaterial = new ArrayList<>();
     
     private HashMap<Sphere,float[]> vertexMap = new HashMap<Sphere,float[]>();
     private HashMap<MeshView,Edge> edgesMap = new HashMap<>();
+    private HashMap<Integer,int[]> faceMap = new HashMap<>();
+    private HashMap<MeshView,Geometry2D> newFaceMap = new HashMap<>();
+    private HashMap<MeshView,Integer> faceMapMesh = new HashMap<>();
     
-    
+    ArrayList<Float> globalVertexList = new ArrayList<>();
     boolean strgPressed = false; 
     
     public UGXReader(String filePath){
@@ -299,6 +305,7 @@ public class UGXReader {
         
         UGXfile ugxfile = xread();
         subsetHandler = ugxfile.getSubset_handler().get(0);
+        globalVertexList = ugxfile.getGlobalVertices();
         
         float[] vertices = ugxfile.getGlobalVerticesArray();
         ArrayList<Edge> edges = ugxfile.getEdges();
@@ -310,7 +317,7 @@ public class UGXReader {
         ArrayList<Pyramid> pyramids = ugxfile.getPyramids();
         TriangleMesh mesh = new TriangleMesh();
         
-      
+        
         ArrayList<Geometry2D> geometry2DList = new ArrayList<Geometry2D>();
         ArrayList<Geometry3D> geometry3DList = new ArrayList<Geometry3D>();
         
@@ -374,6 +381,7 @@ public class UGXReader {
             meshArray[i].getTexCoords().addAll(0,0);
             Group vertexGroup = new Group();
             Group edgesGroup = new Group();
+            Group faceGroup = new Group();
             ssVertices = ugxfile.getSubset_handler().get(0).getSubsets().get(i).getVertexArray();
             
             ssEdges = ugxfile.getSubset_handler().get(0).getSubsets().get(i).getEdgeArray();
@@ -387,7 +395,7 @@ public class UGXReader {
                 Sphere[] sphereArray = new Sphere[ssVertices.length];
                 
                 for (int j = 0; j < ssVertices.length; j++) {
-                    sphereArray[j] = new Sphere(0.075);
+                    sphereArray[j] = new Sphere(0.075,4);
                     
                     float x = vertices[ssVertices[j]*3];
                     float y = vertices[ssVertices[j]*3+1];
@@ -478,10 +486,110 @@ public class UGXReader {
             
             // start of face visualisation
             if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasFaces() && fill) {
-                
+
+                ArrayList<MeshView> quadriMeshList = new ArrayList<>();
+                ArrayList<MeshView> triangleMeshList = new ArrayList<>();
+                ArrayList<TriangleMesh> triMesh = new ArrayList<>();
+                PhongMaterial faceMat = new PhongMaterial(new Color(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[0],
+                                                                ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[1],
+                                                                ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[2],
+                                                                Math.abs(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[3])));
                 for (int j = 0; j < ssFaces.length; j++) {
-                    meshArray[i].getFaces().addAll(geometry2DList.get(ssFaces[j]).getFacesArray());
+                    
+                    float[] texCoords = {0,0};
+                    triMesh = new ArrayList<>();
+                    if (geometry2DList.get(ssFaces[j]).getClass().equals(Quadrilateral.class)) {
+                        
+ 
+                        TriangleMesh mesh1 = new TriangleMesh();
+                        // first triangle of the quadrilateral
+                        mesh1.getPoints().addAll(globalVertexList.get(geometry2DList.get(ssFaces[j]).getNodes()[0]*3),
+                                                 globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[0]*3+1)),
+                                                 globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[0]*3+2)));
+                        mesh1.getPoints().addAll(globalVertexList.get(geometry2DList.get(ssFaces[j]).getNodes()[1]*3),
+                                                 globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[1]*3+1)),
+                                                 globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[1]*3+2)));
+                        mesh1.getPoints().addAll(globalVertexList.get(geometry2DList.get(ssFaces[j]).getNodes()[2]*3),
+                                                 globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[2]*3+1)),
+                                                 globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[2]*3+2)));
+
+                        
+                        mesh1.getTexCoords().addAll(texCoords);
+                        mesh1.getFaces().addAll(2, 0, 0, 0, 1, 0);
+
+                        triMesh.add(mesh1);
+
+                        TriangleMesh mesh2 = new TriangleMesh();
+                        // second triangle of the quadrilateral
+                        mesh2.getPoints().addAll(globalVertexList.get(geometry2DList.get(ssFaces[j]).getNodes()[0] * 3),
+                                globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[0] * 3 + 1)),
+                                globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[0] * 3 + 2)));
+                        mesh2.getPoints().addAll(globalVertexList.get(geometry2DList.get(ssFaces[j]).getNodes()[2] * 3),
+                                globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[2] * 3 + 1)),
+                                globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[2] * 3 + 2)));
+                        mesh2.getPoints().addAll(globalVertexList.get(geometry2DList.get(ssFaces[j]).getNodes()[3] * 3),
+                                globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[3] * 3 + 1)),
+                                globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[3] * 3 + 2)));
+
+                        mesh2.getTexCoords().addAll(texCoords);
+                        mesh2.getFaces().addAll(1, 0, 2, 0, 0, 0);
+
+                        triMesh.add(mesh2);
+
+                        MeshView mv1 = new MeshView(mesh1);
+                        MeshView mv2 = new MeshView(mesh2);
+
+                        quadriMeshList.add(mv1);
+                        quadriMeshList.add(mv2);
+
+                        newFaceMap.put(mv1, geometry2DList.get(ssFaces[j]));
+                        newFaceMap.put(mv2, geometry2DList.get(ssFaces[j]));
+
+                    } else {
+
+                        TriangleMesh mesh1 = new TriangleMesh();
+
+                        mesh1.getPoints().addAll(globalVertexList.get(geometry2DList.get(ssFaces[j]).getNodes()[0] * 3),
+                                globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[0] * 3 + 1)),
+                                globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[0] * 3 + 2)));
+                        mesh1.getPoints().addAll(globalVertexList.get(geometry2DList.get(ssFaces[j]).getNodes()[1] * 3),
+                                globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[1] * 3 + 1)),
+                                globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[1] * 3 + 2)));
+                        mesh1.getPoints().addAll(globalVertexList.get(geometry2DList.get(ssFaces[j]).getNodes()[2] * 3),
+                                globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[2] * 3 + 1)),
+                                globalVertexList.get((geometry2DList.get(ssFaces[j]).getNodes()[2] * 3 + 2)));
+                        mesh1.getTexCoords().addAll(texCoords);
+                        mesh1.getFaces().addAll(0, 0, 1, 0, 2, 0);
+
+                        triMesh.add(mesh1);
+
+                        MeshView mv1 = new MeshView(mesh1);
+                        triangleMeshList.add(mv1);
+                        newFaceMap.put(mv1, geometry2DList.get(ssFaces[j]));
+
+                    }
+
                 }
+
+                MeshView[] faceMeshViewArray = new MeshView[triangleMeshList.size()+quadriMeshList.size()];
+                
+                for (int j = 0; j < triangleMeshList.size(); j++) {
+                    faceMeshViewArray[j] = triangleMeshList.get(j);
+                    faceMeshViewArray[j].setMaterial(faceMat);
+                    faceMeshViewArray[j].setCullFace(CullFace.NONE);
+                    
+                }
+                System.out.println("--");
+                for (int j = triangleMeshList.size(), k = 0; k < quadriMeshList.size(); j++,k++) {
+                    faceMeshViewArray[j] = quadriMeshList.get(k);
+                    faceMeshViewArray[j].setMaterial(faceMat);
+                    faceMeshViewArray[j].setCullFace(CullFace.NONE);
+                    
+                }
+
+                faceGroup.getChildren().addAll(faceMeshViewArray);
+                addFaceInteraction(faceGroup);
+
             } // end of face visualisation
             
             // start of volume visualisation
@@ -494,22 +602,25 @@ public class UGXReader {
                 
 
             meshViewArray[i] = new MeshView(meshArray[i]);
+            addVolumeInteraction(meshViewArray[i]);
+            //addFaceInteraction(meshViewArray[i]);
           
             if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVertices() && ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasEdges() ) {
-                Group fusedGroup = new Group(vertexGroup,edgesGroup,meshViewArray[i]);
+                Group fusedGroup = new Group(vertexGroup,edgesGroup,meshViewArray[i],faceGroup);
                 subsetGroup.getChildren().addAll(fusedGroup);
                 
             } else if(ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVertices()){
-                Group fusedGroup = new Group(vertexGroup,meshViewArray[i]);
+                Group fusedGroup = new Group(vertexGroup,meshViewArray[i],faceGroup);
                 subsetGroup.getChildren().addAll(fusedGroup);
                 
             }else if(ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasEdges()){
-                Group fusedGroup = new Group(edgesGroup,meshViewArray[i]);
+                Group fusedGroup = new Group(edgesGroup,meshViewArray[i],faceGroup);
                 subsetGroup.getChildren().addAll(fusedGroup);
                 
             }
             else{
-                subsetGroup.getChildren().add(meshViewArray[i]);
+                Group fusedGroup = new Group(meshViewArray[i],faceGroup);
+                subsetGroup.getChildren().add(fusedGroup);
             }
         }
         
@@ -532,6 +643,7 @@ public class UGXReader {
                 AmbientLight light = new AmbientLight(Color.WHITE);
                 light.getScope().add(meshViewArray[i]);
                 subsetGroup.getChildren().add(light);
+                
             }
         }
         if(fill) { 
@@ -555,9 +667,13 @@ public class UGXReader {
     private void addVertexInteraction(Group vGroup) {
 
         vGroup.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseClick -> {
-            Node pickRes = mouseClick.getPickResult().getIntersectedNode();
 
-            handleSelection(vertexNodeSelection, vertexNodeSelectionMaterial, pickRes, new Sphere());
+            if (mouseClick.getButton().toString().matches("SECONDARY")) {
+                Node pickRes = mouseClick.getPickResult().getIntersectedNode();
+
+                handleSelection(vertexNodeSelection, vertexNodeSelectionMaterial, pickRes, new Sphere());
+            }
+
 
         }
         );
@@ -565,16 +681,56 @@ public class UGXReader {
 
     private void addEdgeInteraction(Group eGroup) {
         eGroup.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseClick -> {
+            if (mouseClick.getButton().toString().matches("SECONDARY")) {
+                
+                Node pickRes = mouseClick.getPickResult().getIntersectedNode();
 
-            Node pickRes = mouseClick.getPickResult().getIntersectedNode();
-
-            handleSelection(edgeNodeSelection, edgeNodeSelectionMaterial, pickRes, new MeshView());
+                handleSelection(edgeNodeSelection, edgeNodeSelectionMaterial, pickRes, new MeshView());
+            }
 
         }
         );
 
     }
+    
 
+
+        private void addFaceInteraction(Group faceMeshView) {
+
+        faceMeshView.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseClick -> {
+
+            if (mouseClick.getButton().toString().matches("SECONDARY")) {
+
+                Node pickedNode = mouseClick.getPickResult().getIntersectedNode();
+                PickResult res = mouseClick.getPickResult();
+
+                System.out.println(newFaceMap.get(pickedNode));
+                handleSelection(faceNodeSelection, faceNodeSelectionMaterial, pickedNode, new MeshView());
+            }
+
+        });
+
+    }
+        
+        private void addVolumeInteraction(MeshView faceMeshView) {
+
+        faceMeshView.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseClick -> {
+
+            if (mouseClick.getButton().toString().matches("SECONDARY")) {
+
+                Node pickedNode = mouseClick.getPickResult().getIntersectedNode();
+                PickResult res = mouseClick.getPickResult();
+
+                System.out.println("Selected node is a volume!");
+                System.out.println(newFaceMap.get(pickedNode));
+                handleSelection(faceNodeSelection, faceNodeSelectionMaterial, pickedNode, new MeshView());
+            }
+
+        });
+
+    }
+
+    
     private void handleSelection(ArrayList<Node> nodeList, ArrayList<Material> materialList, Node pickResult, Shape3D geometryType) {
 
         if (!nodeList.contains(pickResult)) {
@@ -595,6 +751,14 @@ public class UGXReader {
                 }
                 edgeNodeSelection.clear();
                 edgeNodeSelectionMaterial.clear();
+                
+                for (int i = 0; i < faceNodeSelection.size(); i++) {
+                    
+                    ((MeshView) faceNodeSelection.get(i)).setMaterial(faceNodeSelectionMaterial.get(i));
+                    
+                }
+                faceNodeSelection.clear();
+                faceNodeSelectionMaterial.clear();
 
             }
             // strg is pressed down and the selected node will be added to the selection
@@ -609,6 +773,8 @@ public class UGXReader {
                     System.out.println(resultV[0] + " " + resultV[1] + " " + resultV[2]);
                 } else if (edgesMap.containsKey(pickResult)) {
                     System.out.println(edgesMap.get(pickResult).toString());
+                }else if (faceMapMesh.containsKey(pickResult)){
+                    System.out.println(faceMapMesh.get(pickResult).toString());
                 }
 
             }
@@ -638,6 +804,14 @@ public class UGXReader {
                 }
                 edgeNodeSelection.clear();
                 edgeNodeSelectionMaterial.clear();
+                
+                for (int i = 0; i < faceNodeSelection.size(); i++) {
+                    
+                    ((MeshView) faceNodeSelection.get(i)).setMaterial(faceNodeSelectionMaterial.get(i));
+                    
+                }
+                faceNodeSelection.clear();
+                faceNodeSelectionMaterial.clear();
 
             }
 
@@ -650,11 +824,13 @@ public class UGXReader {
                     System.out.println(resultV[0] + " " + resultV[1] + " " + resultV[2]);
                 } else if (edgesMap.containsKey(pickResult)) {
                     System.out.println(edgesMap.get(pickResult).toString());
+                }else if (faceMapMesh.containsKey(pickResult)){
+                    System.out.println(faceMapMesh.get(pickResult).toString());
                 }
             }
         }
         System.out.println("All selected nodes: " + vertexNodeSelection.size() + " vertices. "
-                + edgeNodeSelection.size() + " edges.");
+                + edgeNodeSelection.size() + " edges. " + faceNodeSelection.size() + " faces." );
 
     }
 

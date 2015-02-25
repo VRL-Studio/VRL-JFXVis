@@ -186,15 +186,14 @@ public class Main extends Application{
         
         String filePath = "../VRL-JFXVis/src/main/java/edu/gcsc/jfx3d/ugx/bigSpineBigAppBot.ugx";
         UGXReader ugxr = new UGXReader(filePath);
-        ugxGeometry = ugxr.xbuildUGX(false, false);
+        ugxGeometry = ugxr.xbuildUGX(true, true);
         subsetNameArray = ugxr.getSubssetNameArray();
         
         root.getChildren().add(ugxGeometry);
 
         VFX3DUtil.addMouseBehavior(ugxGeometry, ugxGeometry, MouseButton.PRIMARY,
                 Rotate.X_AXIS, Rotate.Y_AXIS);
-        VFX3DUtil.addMouseBehavior(ugxGeometry, ugxGeometry, MouseButton.SECONDARY,
-                Rotate.X_AXIS, Rotate.Z_AXIS);
+
         
         ugxSubsetCount = ugxr.getNumberOfSubsets();
         
@@ -247,25 +246,25 @@ public class Main extends Application{
                 camera.setTranslateZ(0);
                 
             }
-            if(keycode == KeyCode.ADD){
+            if(keycode == KeyCode.ADD || keycode == KeyCode.PLUS){
                 
                 ugxSwitchCounter = (ugxSwitchCounter +1) % ugxSubsetCount;
                 for (int i = 0; i < ugxSubsetCount; i++) {
                     if (i == ugxSwitchCounter) {
-                        ugxGeometry.getChildren().get(i).setOpacity(1);
+                        ugxGeometry.getChildren().get(i).setVisible(true);
                         System.out.println("Currently shown subset: " + ugxSwitchCounter +" of "+ (ugxSubsetCount-1) + ", "  + subsetNameArray[ugxSwitchCounter]);
                     }
                     else{
-                        ugxGeometry.getChildren().get(i).setOpacity(0);
+                        ugxGeometry.getChildren().get(i).setVisible(false);
                     }
                 }
                
             }
             
-            if (keycode == KeyCode.SUBTRACT) {
+            if (keycode == KeyCode.SUBTRACT || keycode == KeyCode.MINUS) {
                 ugxSwitchCounter = -1;
                 for (int i = 0; i < ugxSubsetCount; i++) {
-                    ugxGeometry.getChildren().get(i).setOpacity(1);
+                    ugxGeometry.getChildren().get(i).setVisible(true);
                 }
                 System.out.println("Currently shown subset: All");
             }

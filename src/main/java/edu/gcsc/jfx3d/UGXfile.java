@@ -262,7 +262,7 @@ public class UGXfile {
 //                    System.out.println(pp3);
 //                    System.out.println("--------------");
                     
-                    quadrilaterals.add(new Quadrilateral(pp0, pp1, pp2, pp3, geometryCounter2D++));
+                    quadrilaterals.add(new Quadrilateral(pp0, pp1, pp2, pp3, geometryCounter2D+=2));
                 }
                 containsQuadrilaterals = true;
             }
@@ -486,6 +486,9 @@ public class UGXfile {
         return containsPyramids;
     }
         
+    public int getGeometryCounter2D(){
+        return geometryCounter2D;
+    }
 
         
 

@@ -12,10 +12,12 @@ package edu.gcsc.jfx3d;
 public abstract class Geometry2D {
     
     private int[] nodes;
+    private int index;
     
     public abstract int[] getNodes();
     public abstract void setNodes(int[] array);
     public abstract int[] getFacesArray();
+    public abstract int getIndex();
     
     
     
