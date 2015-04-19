@@ -53,12 +53,21 @@ public class UGXReader {
     private ArrayList<Material> edgeNodeSelectionMaterial = new ArrayList<Material>();
     private ArrayList<Node> faceNodeSelection = new ArrayList<>();
     private ArrayList<Material> faceNodeSelectionMaterial = new ArrayList<>();
+    private ArrayList<Node> subsetNodeSelection = new ArrayList<>();
+    private ArrayList<Material> subsetNodeSelectionMaterial = new ArrayList<>();
     
     private HashMap<Sphere,float[]> vertexMap = new HashMap<Sphere,float[]>();
     private HashMap<MeshView,Edge> edgesMap = new HashMap<>();
     private HashMap<Integer,int[]> faceMap = new HashMap<>();
     private HashMap<MeshView,Geometry2D> newFaceMap = new HashMap<>();
     private HashMap<MeshView,Integer> faceMapMesh = new HashMap<>();
+    private HashMap<MeshView,UGXsubset> subsetMapMeshToSubset = new HashMap<>();
+    private HashMap<UGXsubset,ArrayList<MeshView>> subsetMapSubsetToMesh = new HashMap<>();
+    
+    private boolean highResolution = false;
+    private boolean doubleFacesOnEdges = true;
+    private boolean renderFaces = true;
+    private boolean debugMode = false;
     
     ArrayList<Float> globalVertexList = new ArrayList<>();
     boolean strgPressed = false; 
@@ -300,8 +309,8 @@ public class UGXReader {
     }
     
     
-    /**Creates a 3D object from a ugx file using the xStream library **/
-    public Group xbuildUGX (boolean ambient, boolean fill){
+    /**Creates a 3D object from a ugx file using the xStream library with the parameters that were set before using the setFlag* methods  **/
+    public Group xbuildUGX (){
         
         UGXfile ugxfile = xread();
         subsetHandler = ugxfile.getSubset_handler().get(0);
@@ -390,104 +399,275 @@ public class UGXReader {
            
             ssVolumes = ugxfile.getSubset_handler().get(0).getSubsets().get(i).getVolumeArray();
             
+            ArrayList<MeshView> subsetMeshViewArray = new ArrayList<>();
+            
             // start of vertex visualisation
             if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVertices()) {
-                Sphere[] sphereArray = new Sphere[ssVertices.length];
-                
-                for (int j = 0; j < ssVertices.length; j++) {
-                    sphereArray[j] = new Sphere(0.075,4);
-                    
-                    float x = vertices[ssVertices[j]*3];
-                    float y = vertices[ssVertices[j]*3+1];
-                    float z = vertices[ssVertices[j]*3+2];
+                PhongMaterial sphereMat = new PhongMaterial(new Color(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[0],
+                        ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[1],
+                        ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[2],
+                        Math.abs(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[3])));
 
-                    sphereArray[j].setTranslateX(x);
-                    sphereArray[j].setTranslateY(y);
-                    sphereArray[j].setTranslateZ(z);
-                    PhongMaterial sphereMat = new PhongMaterial(new Color(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[0],
-                                                                ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[1],
-                                                                ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[2],
-                                                                Math.abs(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[3])));
-                    sphereArray[j].setMaterial(sphereMat);
-                    vertexGroup.getChildren().add(sphereArray[j]);
-                    vertexMap.put(sphereArray[j], new float[] {x,y,z});
+                if (highResolution) {
+                    Sphere[] sphereArray = new Sphere[ssVertices.length];
+                    for (int j = 0; j < ssVertices.length; j++) {
+                        sphereArray[j] = new Sphere(0.075, 4);
+
+                        float x = vertices[ssVertices[j] * 3];
+                        float y = vertices[ssVertices[j] * 3 + 1];
+                        float z = vertices[ssVertices[j] * 3 + 2];
+
+                        sphereArray[j].setTranslateX(x);
+                        sphereArray[j].setTranslateY(y);
+                        sphereArray[j].setTranslateZ(z);
+
+                        sphereArray[j].setMaterial(sphereMat);
+
+                        vertexGroup.getChildren().add(sphereArray[j]);
+                        vertexMap.put(sphereArray[j], new float[]{x, y, z});
+                    }
+                    addVertexInteraction(vertexGroup);
+                } else {
+
+                    TriangleMesh vertexMesh = new TriangleMesh();
+                    vertexMesh.getTexCoords().addAll(0, 0);
+
+                    float width = 0.03f;
+
+                    for (int j = 0; j < ssVertices.length; j++) {
+
+                        float x = vertices[ssVertices[j] * 3];
+                        float y = vertices[ssVertices[j] * 3 + 1];
+                        float z = vertices[ssVertices[j] * 3 + 2];
+
+                        float negX = x - width;
+                        float posX = x + width;
+                        float negY = y - width;
+                        float posY = y + width;
+                        float negZ = z - width;
+                        float posZ = z + width;
+
+                        float points[]
+                                = {posX, posY, posZ,
+                                    posX, posY, negZ,
+                                    posX, negY, posZ,
+                                    posX, negY, negZ,
+                                    negX, posY, posZ,
+                                    negX, posY, negZ,
+                                    negX, negY, posZ,
+                                    negX, negY, negZ,};
+
+                        int faces[]
+                                = {0 + j * 8, 0, 2 + j * 8, 0, 1 + j * 8, 0,
+                                    2 + j * 8, 0, 3 + j * 8, 0, 1 + j * 8, 0,
+                                    4 + j * 8, 0, 5 + j * 8, 0, 6 + j * 8, 0,
+                                    6 + j * 8, 0, 5 + j * 8, 0, 7 + j * 8, 0,
+                                    0 + j * 8, 0, 1 + j * 8, 0, 4 + j * 8, 0,
+                                    4 + j * 8, 0, 1 + j * 8, 0, 5 + j * 8, 0,
+                                    2 + j * 8, 0, 6 + j * 8, 0, 3 + j * 8, 0,
+                                    3 + j * 8, 0, 6 + j * 8, 0, 7 + j * 8, 0,
+                                    0 + j * 8, 0, 4 + j * 8, 0, 2 + j * 8, 0,
+                                    2 + j * 8, 0, 4 + j * 8, 0, 6 + j * 8, 0,
+                                    1 + j * 8, 0, 3 + j * 8, 0, 5 + j * 8, 0,
+                                    5 + j * 8, 0, 3 + j * 8, 0, 7 + j * 8, 0};
+
+                        vertexMesh.getPoints().addAll(points);
+                        vertexMesh.getFaces().addAll(faces);
+
+                    }
+                    MeshView vertexMeshView = new MeshView(vertexMesh);
+                    subsetMapMeshToSubset.put(vertexMeshView, ugxfile.getSubset_handler().get(0).getSubsets().get(i));
+                    subsetMapSubsetToMesh.put(ugxfile.getSubset_handler().get(0).getSubsets().get(i), subsetMeshViewArray);
+                    subsetMapSubsetToMesh.get(ugxfile.getSubset_handler().get(0).getSubsets().get(i)).add(vertexMeshView);
+                    vertexMeshView.setMaterial(sphereMat);
+                    vertexMeshView.setDrawMode(DrawMode.FILL);
+                    vertexMeshView.setCullFace(CullFace.NONE);
+
+                    vertexGroup.getChildren().addAll(vertexMeshView);
+
+                    addLowResolutionInteraction(vertexMeshView);
                 }
-                addVertexInteraction(vertexGroup);
+
             }// end of vertex visualisation
-            
-            
+
             // start of edge visualisation
             if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasEdges()) {
                 TriangleMesh edgesMesh = new TriangleMesh();
-                edgesMesh.getTexCoords().addAll(0,0);
-                ArrayList<Prism> edgesPrisms = new ArrayList<Prism>();
-                float width = 0.03f;
-                
+                edgesMesh.getTexCoords().addAll(0, 0);
+
+                float width = 0.02f;
+
                 PhongMaterial edgeMat = new PhongMaterial(new Color(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[0],
-                                                                ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[1],
-                                                                ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[2],
-                                                                Math.abs(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[3])));
-                
-                ArrayList<TriangleMesh> triMesh = new ArrayList<>();
-                
-                MeshView[] meshViews = new MeshView[ssEdges.length];
-                for (int j = 0; j < ssEdges.length; j++) {
-                    triMesh.add(new TriangleMesh());
-                    triMesh.get(j).getTexCoords().addAll(0,0);
-                    
-                    float bottomXexact = edges.get(ssEdges[j]).getVertices()[0].getX();
-                    float bottomYexact = edges.get(ssEdges[j]).getVertices()[0].getY();
-                    float bottomZ = edges.get(ssEdges[j]).getVertices()[0].getZ();
-                    
-                    float topXexact = edges.get(ssEdges[j]).getVertices()[1].getX();
-                    float topYexact = edges.get(ssEdges[j]).getVertices()[1].getY();
-                    float topZ = edges.get(ssEdges[j]).getVertices()[1].getZ();
-                    
-                    //create triangle around the first Node
-//                        edgesMesh.getPoints().addAll(bottomXexact - width, bottomYexact - width, bottomZ-width);
-//                        edgesMesh.getPoints().addAll(bottomXexact + width, bottomYexact - width, bottomZ);
-//                        edgesMesh.getPoints().addAll(bottomXexact, bottomYexact + width, bottomZ+width);
-                       
-                        triMesh.get(j).getPoints().addAll(bottomXexact - width, bottomYexact - width, bottomZ-width);
-                        triMesh.get(j).getPoints().addAll(bottomXexact + width, bottomYexact - width, bottomZ);
-                        triMesh.get(j).getPoints().addAll(bottomXexact, bottomYexact + width, bottomZ+width);
-                        
-                    //create triangle around the second Node
-//                        edgesMesh.getPoints().addAll(topXexact - width, topYexact - width, topZ-width);
-//                        edgesMesh.getPoints().addAll(topXexact + width, topYexact - width, topZ);
-//                        edgesMesh.getPoints().addAll(topXexact, topYexact + width, topZ+width);
-                        
-                        triMesh.get(j).getPoints().addAll(topXexact - width, topYexact - width, topZ-width);
-                        triMesh.get(j).getPoints().addAll(topXexact + width, topYexact - width, topZ);
-                        triMesh.get(j).getPoints().addAll(topXexact, topYexact + width, topZ+width);
-                                     
-                    //create a prism from the two triangles and add the faces
-                    edgesPrisms.add(new Prism(0, 1, 2, 3, 4, 5, j));
-                    //edgesPrisms.add(new Prism(j*6, j*6+1, j*6+2, j*6+3, j*6+4, j*6+5, j));
-                    //edgesMesh.getFaces().addAll(edgesPrisms.get(j).getFacesArray());
-                    triMesh.get(j).getFaces().addAll(edgesPrisms.get(j).getFacesArray());
-                    
-                    meshViews[j] = new MeshView(triMesh.get(j));
-                    meshViews[j].setMaterial(edgeMat);
-                    meshViews[j].setCullFace(CullFace.NONE);
-                    
-                    edgesMap.put(meshViews[j], edges.get(ssEdges[j]));
-                    
+                        ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[1],
+                        ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[2],
+                        Math.abs(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[3])));
+
+                if (highResolution) {
+
+                    ArrayList<TriangleMesh> triMesh = new ArrayList<>();
+
+                    MeshView[] meshViews = new MeshView[ssEdges.length];
+                    for (int j = 0; j < ssEdges.length; j++) {
+                        triMesh.add(new TriangleMesh());
+                        triMesh.get(j).getTexCoords().addAll(0, 0);
+
+                        float p1xneg = edges.get(ssEdges[j]).getVertices()[0].getX() - width;
+                        float p1xpos = edges.get(ssEdges[j]).getVertices()[0].getX() + width;
+                        float p1yneg = edges.get(ssEdges[j]).getVertices()[0].getY() - width;
+                        float p1ypos = edges.get(ssEdges[j]).getVertices()[0].getY() + width;
+                        float p1zneg = edges.get(ssEdges[j]).getVertices()[0].getZ() - width;
+                        float p1zpos = edges.get(ssEdges[j]).getVertices()[0].getZ() + width;
+
+                        float p2xneg = edges.get(ssEdges[j]).getVertices()[1].getX() - width;;
+                        float p2xpos = edges.get(ssEdges[j]).getVertices()[1].getX() + width;;
+                        float p2yneg = edges.get(ssEdges[j]).getVertices()[1].getY() - width;
+                        float p2ypos = edges.get(ssEdges[j]).getVertices()[1].getY() + width;
+                        float p2zneg = edges.get(ssEdges[j]).getVertices()[1].getZ() - width;;
+                        float p2zpos = edges.get(ssEdges[j]).getVertices()[1].getZ() + width;;
+
+                        float points[]
+                                = {
+                                    p1xpos, p1ypos, p1zpos, //1
+                                    p1xpos, p1yneg, p1zpos, //2
+                                    p1xneg, p1ypos, p1zneg, //3
+                                    p1xneg, p1yneg, p1zneg, //4
+                                    p2xpos, p2ypos, p2zpos, //5
+                                    p2xpos, p2yneg, p2zpos, //6
+                                    p2xneg, p2ypos, p2zneg, //7
+                                    p2xneg, p2yneg, p2zneg, //8
+                                };
+
+                        int faces[]
+                                = {0, 0, 2, 0, 1, 0,
+                                    2, 0, 3, 0, 1, 0,
+                                    4, 0, 5, 0, 6, 0,
+                                    6, 0, 5, 0, 7, 0,
+                                    0, 0, 1, 0, 4, 0,
+                                    4, 0, 1, 0, 5, 0,
+                                    2, 0, 6, 0, 3, 0,
+                                    3, 0, 6, 0, 7, 0,
+                                    0, 0, 4, 0, 2, 0,
+                                    2, 0, 4, 0, 6, 0,
+                                    1, 0, 3, 0, 5, 0,
+                                    5, 0, 3, 0, 7, 0};
+
+                        triMesh.get(j).getPoints().addAll(points);
+
+                        triMesh.get(j).getFaces().addAll(faces);
+
+                        if (doubleFacesOnEdges) {
+                            int faces2[]
+                                    = {0, 0, 1, 0, 2, 0,
+                                        2, 0, 1, 0, 3, 0,
+                                        4, 0, 6, 0, 5, 0,
+                                        6, 0, 7, 0, 5, 0,
+                                        0, 0, 4, 0, 1, 0,
+                                        4, 0, 5, 0, 1, 0,
+                                        2, 0, 3, 0, 6, 0,
+                                        3, 0, 7, 0, 6, 0,
+                                        0, 0, 2, 0, 4, 0,
+                                        2, 0, 6, 0, 4, 0,
+                                        1, 0, 5, 0, 3, 0,
+                                        5, 0, 7, 0, 3, 0};
+                            triMesh.get(j).getFaces().addAll(faces2);
+                        }
+
+                        meshViews[j] = new MeshView(triMesh.get(j));
+                        meshViews[j].setMaterial(edgeMat);
+                        meshViews[j].setCullFace(CullFace.BACK);
+
+                        edgesMap.put(meshViews[j], edges.get(ssEdges[j]));
+
+                    }
+
+                    edgesGroup.getChildren().addAll(meshViews);
+                    addEdgeInteraction(edgesGroup);
+
+                } else { //low resolution edge visualization
+
+                    for (int j = 0; j < ssEdges.length; j++) {
+
+                        float p1xneg = edges.get(ssEdges[j]).getVertices()[0].getX() - width;
+                        float p1xpos = edges.get(ssEdges[j]).getVertices()[0].getX() + width;
+                        float p1yneg = edges.get(ssEdges[j]).getVertices()[0].getY() - width;
+                        float p1ypos = edges.get(ssEdges[j]).getVertices()[0].getY() + width;
+                        float p1zneg = edges.get(ssEdges[j]).getVertices()[0].getZ() - width;
+                        float p1zpos = edges.get(ssEdges[j]).getVertices()[0].getZ() + width;
+
+                        float p2xneg = edges.get(ssEdges[j]).getVertices()[1].getX() - width;;
+                        float p2xpos = edges.get(ssEdges[j]).getVertices()[1].getX() + width;;
+                        float p2yneg = edges.get(ssEdges[j]).getVertices()[1].getY() - width;
+                        float p2ypos = edges.get(ssEdges[j]).getVertices()[1].getY() + width;
+                        float p2zneg = edges.get(ssEdges[j]).getVertices()[1].getZ() - width;;
+                        float p2zpos = edges.get(ssEdges[j]).getVertices()[1].getZ() + width;;
+
+                        float points[]
+                                = {
+                                    p1xpos, p1ypos, p1zpos, //1
+                                    p1xpos, p1yneg, p1zpos, //2
+                                    p1xneg, p1ypos, p1zneg, //3
+                                    p1xneg, p1yneg, p1zneg, //4
+                                    p2xpos, p2ypos, p2zpos, //5
+                                    p2xpos, p2yneg, p2zpos, //6
+                                    p2xneg, p2ypos, p2zneg, //7
+                                    p2xneg, p2yneg, p2zneg, //8
+                                };
+
+                        int faces[]
+                                = {0 + j * 8, 0, 2 + j * 8, 0, 1 + j * 8, 0,
+                                    2 + j * 8, 0, 3 + j * 8, 0, 1 + j * 8, 0,
+                                    4 + j * 8, 0, 5 + j * 8, 0, 6 + j * 8, 0,
+                                    6 + j * 8, 0, 5 + j * 8, 0, 7 + j * 8, 0,
+                                    0 + j * 8, 0, 1 + j * 8, 0, 4 + j * 8, 0,
+                                    4 + j * 8, 0, 1 + j * 8, 0, 5 + j * 8, 0,
+                                    2 + j * 8, 0, 6 + j * 8, 0, 3 + j * 8, 0,
+                                    3 + j * 8, 0, 6 + j * 8, 0, 7 + j * 8, 0,
+                                    0 + j * 8, 0, 4 + j * 8, 0, 2 + j * 8, 0,
+                                    2 + j * 8, 0, 4 + j * 8, 0, 6 + j * 8, 0,
+                                    1 + j * 8, 0, 3 + j * 8, 0, 5 + j * 8, 0,
+                                    5 + j * 8, 0, 3 + j * 8, 0, 7 + j * 8, 0};
+
+                        edgesMesh.getPoints().addAll(points);
+                        edgesMesh.getFaces().addAll(faces);
+
+                        if (doubleFacesOnEdges) {
+                            int faces2[]
+                                    = {0 + j * 8, 0, 1 + j * 8, 0, 2 + j * 8, 0,
+                                        2 + j * 8, 0, 1 + j * 8, 0, 3 + j * 8, 0,
+                                        4 + j * 8, 0, 6 + j * 8, 0, 5 + j * 8, 0,
+                                        6 + j * 8, 0, 7 + j * 8, 0, 5 + j * 8, 0,
+                                        0 + j * 8, 0, 4 + j * 8, 0, 1 + j * 8, 0,
+                                        4 + j * 8, 0, 5 + j * 8, 0, 1 + j * 8, 0,
+                                        2 + j * 8, 0, 3 + j * 8, 0, 6 + j * 8, 0,
+                                        3 + j * 8, 0, 7 + j * 8, 0, 6 + j * 8, 0,
+                                        0 + j * 8, 0, 2 + j * 8, 0, 4 + j * 8, 0,
+                                        2 + j * 8, 0, 6 + j * 8, 0, 4 + j * 8, 0,
+                                        1 + j * 8, 0, 5 + j * 8, 0, 3 + j * 8, 0,
+                                        5 + j * 8, 0, 7 + j * 8, 0, 3 + j * 8, 0};
+
+                            edgesMesh.getFaces().addAll(faces2);
+                        }
+                    }
+                    MeshView edgesMeshView = new MeshView(edgesMesh);
+                    subsetMapMeshToSubset.put(edgesMeshView, ugxfile.getSubset_handler().get(0).getSubsets().get(i));
+                    subsetMapSubsetToMesh.put(ugxfile.getSubset_handler().get(0).getSubsets().get(i), subsetMeshViewArray);
+                    subsetMapSubsetToMesh.get(ugxfile.getSubset_handler().get(0).getSubsets().get(i)).add(edgesMeshView);
+                    edgesMeshView.setMaterial(edgeMat);
+                    edgesMeshView.setDrawMode(DrawMode.FILL);
+                    edgesMeshView.setCullFace(CullFace.BACK);
+
+                    edgesGroup.getChildren().addAll(edgesMeshView);
+
+                    addLowResolutionInteraction(edgesMeshView);
+                    //addEdgeInteraction(edgesGroup);
                 }
-                //MeshView edgesMeshView = new MeshView(edgesMesh);
-                
-                //edgesMeshView.setMaterial(edgeMat);
-                //edgesMeshView.setDrawMode(DrawMode.FILL);
-                //edgesMeshView.setCullFace(CullFace.NONE);
- 
-                edgesGroup.getChildren().addAll(meshViews);
-                addEdgeInteraction(edgesGroup);
+
             } // end of edge visualisation
             
             // start of face visualisation
-            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasFaces() && fill) {
-
-                ArrayList<MeshView> quadriMeshList = new ArrayList<>();
+            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasFaces() && renderFaces) {
+                if(highResolution){
+                    ArrayList<MeshView> quadriMeshList = new ArrayList<>();
                 ArrayList<MeshView> triangleMeshList = new ArrayList<>();
                 ArrayList<TriangleMesh> triMesh = new ArrayList<>();
                 PhongMaterial faceMat = new PhongMaterial(new Color(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[0],
@@ -589,12 +769,18 @@ public class UGXReader {
 
                 faceGroup.getChildren().addAll(faceMeshViewArray);
                 addFaceInteraction(faceGroup);
-
+                    
+                }else{
+                    for (int j = 0; j < ssFaces.length; j++) {
+                        meshArray[i].getFaces().addAll(geometry2DList.get(ssFaces[j]).getFacesArray());
+                    }
+                }
             } // end of face visualisation
             
             // start of volume visualisation
-            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVolumes() && fill){
+            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVolumes() && renderFaces){
                 
+                // TODO: IMPLEMENT HIGH RESOLUTION VOLUME RENDERING
                 for (int j = 0; j < ssVolumes.length; j++) {
                     meshArray[i].getFaces().addAll(geometry3DList.get(ssVolumes[j]).getFacesArray());
                 }
@@ -602,25 +788,37 @@ public class UGXReader {
                 
 
             meshViewArray[i] = new MeshView(meshArray[i]);
-            addVolumeInteraction(meshViewArray[i]);
-            //addFaceInteraction(meshViewArray[i]);
-          
-            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVertices() && ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasEdges() ) {
-                Group fusedGroup = new Group(vertexGroup,edgesGroup,meshViewArray[i],faceGroup);
-                subsetGroup.getChildren().addAll(fusedGroup);
-                
-            } else if(ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVertices()){
-                Group fusedGroup = new Group(vertexGroup,meshViewArray[i],faceGroup);
-                subsetGroup.getChildren().addAll(fusedGroup);
-                
-            }else if(ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasEdges()){
-                Group fusedGroup = new Group(edgesGroup,meshViewArray[i],faceGroup);
-                subsetGroup.getChildren().addAll(fusedGroup);
-                
+            if (highResolution) {
+                addVolumeInteraction(meshViewArray[i]);
             }
-            else{
-                Group fusedGroup = new Group(meshViewArray[i],faceGroup);
-                subsetGroup.getChildren().add(fusedGroup);
+            
+            subsetMapMeshToSubset.put(meshViewArray[i], ugxfile.getSubset_handler().get(0).getSubsets().get(i));
+            subsetMapSubsetToMesh.put(ugxfile.getSubset_handler().get(0).getSubsets().get(i), subsetMeshViewArray);
+            subsetMapSubsetToMesh.get(ugxfile.getSubset_handler().get(0).getSubsets().get(i)).add(meshViewArray[i]);
+
+          
+            if (highResolution) {
+                if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVertices() && ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasEdges()) {
+                    Group fusedGroup = new Group(vertexGroup, edgesGroup, meshViewArray[i], faceGroup);
+                    subsetGroup.getChildren().addAll(fusedGroup);
+                    
+                } else if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVertices()) {
+                    Group fusedGroup = new Group(vertexGroup, meshViewArray[i], faceGroup);
+                    subsetGroup.getChildren().addAll(fusedGroup);
+                    
+                } else if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasEdges()) {
+                    Group fusedGroup = new Group(edgesGroup, meshViewArray[i], faceGroup);
+                    subsetGroup.getChildren().addAll(fusedGroup);
+                    
+                } else {
+                    Group fusedGroup = new Group(meshViewArray[i], faceGroup);
+                    subsetGroup.getChildren().add(fusedGroup);
+                }
+            } else {
+                Group lowResGroup = new Group(vertexGroup,edgesGroup,meshViewArray[i]);
+                addLowResolutionInteraction(meshViewArray[i]);
+ 
+                subsetGroup.getChildren().add(lowResGroup);
             }
         }
         
@@ -637,16 +835,8 @@ public class UGXReader {
                 meshViewArray[i].setMaterial(material);
     
         }
-        if (ambient) {
-            for (int i = 0; i < ssNumber; i++) {
-                
-                AmbientLight light = new AmbientLight(Color.WHITE);
-                light.getScope().add(meshViewArray[i]);
-                subsetGroup.getChildren().add(light);
-                
-            }
-        }
-        if(fill) { 
+        
+        if(renderFaces) { 
             for (int i = 0; i < ssNumber; i++) {
                 meshViewArray[i].setDrawMode(DrawMode.FILL);
             }
@@ -729,106 +919,175 @@ public class UGXReader {
         });
 
     }
+        
+        private void addLowResolutionInteraction(Shape3D shape){
+            
+            shape.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseClick -> {
 
+            if (mouseClick.getButton().toString().matches("SECONDARY")) {
+
+                Node pickedNode = mouseClick.getPickResult().getIntersectedNode();
+                PickResult res = mouseClick.getPickResult();
+                System.out.println(pickedNode);
+
+                //handleSelection(subsetNodeSelection, subsetNodeSelectionMaterial, pickedNode, new MeshView());
+                handleLowResolutionSelection(pickedNode);
+            }
+
+        });
+        }
+        
+        private void handleLowResolutionSelection(Node pickResult){
+            if (!subsetNodeSelection.contains(pickResult)) { 
+                if (!Main.ctrlPressedDown) { //ctrl not pressed and selected node was not selected before -> remove all nodes
+                    
+                    for (int i = 0; i < subsetNodeSelection.size(); i++) {
+                        
+                        ((MeshView)subsetNodeSelection.get(i)).setMaterial(subsetNodeSelectionMaterial.get(i));
+                        
+                    }
+                    subsetNodeSelection.clear();
+                    subsetNodeSelectionMaterial.clear();
+                    
+                }
+                // add new node to the selection
+                
+                Color col = new Color(1, 1, 1, 1);
+                PhongMaterial mat = new PhongMaterial(col);
+                
+                UGXsubset pickedSubset = subsetMapMeshToSubset.get(pickResult);
+                
+                for (int i = 0; i < subsetMapSubsetToMesh.get(pickedSubset).size(); i++) {
+                    
+                    subsetNodeSelection.add(subsetMapSubsetToMesh.get(pickedSubset).get(i));
+                    subsetNodeSelectionMaterial.add(subsetMapSubsetToMesh.get(pickedSubset).get(i).getMaterial());
+                    subsetMapSubsetToMesh.get(pickedSubset).get(i).setMaterial(mat);
+                }
+
+            }else{ //selected node is already in the selection
+                
+                if (Main.ctrlPressedDown) { //ctrl is pressed, the selected node was already selected before, so we only remove this node from the selection
+                    
+                    UGXsubset pickedSubset = subsetMapMeshToSubset.get(pickResult);
+                    
+                    for (int i = 0; i < subsetMapSubsetToMesh.get(pickedSubset).size(); i++) {
+                        int index = subsetNodeSelection.indexOf(subsetMapSubsetToMesh.get(pickedSubset).get(i));
+                        subsetMapSubsetToMesh.get(pickedSubset).get(i).setMaterial(subsetNodeSelectionMaterial.get(index));
+                        
+                    }
+                    for (int i = 0; i < subsetMapSubsetToMesh.get(pickedSubset).size(); i++) {
+                        subsetNodeSelection.remove(subsetMapSubsetToMesh.get(pickedSubset).get(i));
+                        subsetNodeSelectionMaterial.remove(subsetMapSubsetToMesh.get(pickedSubset).get(i).getMaterial());
+                    }
+                    
+                }else{ // ctrl is not pressed, the selected node was already selected before. we remove the whole selection
+                    UGXsubset pickedSubset = subsetMapMeshToSubset.get(pickResult);
+                    for (int i = 0; i < subsetMapSubsetToMesh.get(pickedSubset).size(); i++) {
+                        int index = subsetNodeSelection.indexOf(subsetMapSubsetToMesh.get(pickedSubset).get(i));
+                        subsetMapSubsetToMesh.get(pickedSubset).get(i).setMaterial(subsetNodeSelectionMaterial.get(index));  
+                    }
+                    subsetNodeSelection.clear();
+                    subsetNodeSelectionMaterial.clear();
+                    
+                }
+            }
+            System.out.print("\nClicked Subset: ");
+                    System.out.println(subsetMapMeshToSubset.get(pickResult).getSubsetName());
+                    UGXsubset testss = subsetMapMeshToSubset.get(pickResult);
+                    
+                    System.out.println("Selected subset is split in the following MeshViews " +subsetMapSubsetToMesh.get(testss));
+        }
     
     private void handleSelection(ArrayList<Node> nodeList, ArrayList<Material> materialList, Node pickResult, Shape3D geometryType) {
 
         if (!nodeList.contains(pickResult)) {
 
-            if (!Main.strgPressedDown) { // strg not pressed and selected node was not selected before
+            if (!Main.ctrlPressedDown) { // ctrl not pressed and selected node was not selected before
                 // remove all nodes from the selection
 
-                for (int i = 0; i < vertexNodeSelection.size(); i++) {
-
-                    ((Sphere) vertexNodeSelection.get(i)).setMaterial(vertexNodeSelectionMaterial.get(i));
-                }
-                vertexNodeSelection.clear();
-                vertexNodeSelectionMaterial.clear();
-
-                for (int i = 0; i < edgeNodeSelection.size(); i++) {
-
-                    ((MeshView) edgeNodeSelection.get(i)).setMaterial(edgeNodeSelectionMaterial.get(i));
-                }
-                edgeNodeSelection.clear();
-                edgeNodeSelectionMaterial.clear();
-                
-                for (int i = 0; i < faceNodeSelection.size(); i++) {
+                    for (int i = 0; i < vertexNodeSelection.size(); i++) {
+                        
+                        ((Sphere) vertexNodeSelection.get(i)).setMaterial(vertexNodeSelectionMaterial.get(i));
+                    }
+                    vertexNodeSelection.clear();
+                    vertexNodeSelectionMaterial.clear();
                     
-                    ((MeshView) faceNodeSelection.get(i)).setMaterial(faceNodeSelectionMaterial.get(i));
+                    for (int i = 0; i < edgeNodeSelection.size(); i++) {
+                        
+                        ((MeshView) edgeNodeSelection.get(i)).setMaterial(edgeNodeSelectionMaterial.get(i));
+                    }
+                    edgeNodeSelection.clear();
+                    edgeNodeSelectionMaterial.clear();
                     
-                }
-                faceNodeSelection.clear();
-                faceNodeSelectionMaterial.clear();
+                    for (int i = 0; i < faceNodeSelection.size(); i++) {
+                        
+                        ((MeshView) faceNodeSelection.get(i)).setMaterial(faceNodeSelectionMaterial.get(i));
+                        
+                    }
+                    faceNodeSelection.clear();
+                    faceNodeSelectionMaterial.clear();
+              
 
             }
-            // strg is pressed down and the selected node will be added to the selection
-            nodeList.add(pickResult);
-            materialList.add((geometryType.getClass().cast(pickResult)).getMaterial());
-            System.out.println("Elements in selection :");
-            for (int i = 0; i < nodeList.size(); i++) {
-                System.out.print(nodeList.get(i) + "  ");
-
-                if (vertexMap.containsKey(pickResult)) {
-                    float[] resultV = vertexMap.get(vertexNodeSelection.get(i));
-                    System.out.println(resultV[0] + " " + resultV[1] + " " + resultV[2]);
-                } else if (edgesMap.containsKey(pickResult)) {
-                    System.out.println(edgesMap.get(pickResult).toString());
-                }else if (faceMapMesh.containsKey(pickResult)){
-                    System.out.println(faceMapMesh.get(pickResult).toString());
-                }
-
-            }
+            // ctrl is pressed down and the selected node will be added to the selection
             Color col = new Color(1, 1, 1, 1);
             PhongMaterial mat = new PhongMaterial(col);
-            geometryType.getClass().cast(pickResult).setMaterial(mat);
+            
+                nodeList.add(pickResult);
+                materialList.add((geometryType.getClass().cast(pickResult)).getMaterial());
+                geometryType.getClass().cast(pickResult).setMaterial(mat);
+            
         } else {
             // node was already in the selection, remove it from the selection
-            // strg is pressed down, so we only remove the selected node and not the whole selection
+            // ctrl is pressed down, so we only remove the selected node and not the whole selection
 
-            int index = nodeList.indexOf(pickResult);
-            geometryType.getClass().cast(nodeList.get(index)).setMaterial(materialList.get(index));
-            nodeList.remove(index);
-            materialList.remove(index);
-            if (!Main.strgPressedDown) { // strg not pressed, so we remove the whole selection
+            if (Main.ctrlPressedDown) {
+                int index = nodeList.indexOf(pickResult);
+                    geometryType.getClass().cast(nodeList.get(index)).setMaterial(materialList.get(index));
+                    nodeList.remove(index);
+                    materialList.remove(index);
+              
+            }
+            if (!Main.ctrlPressedDown) { // ctrl not pressed, so we remove the whole selection
 
-                for (int i = 0; i < vertexNodeSelection.size(); i++) {
-
-                    ((Sphere) vertexNodeSelection.get(i)).setMaterial(vertexNodeSelectionMaterial.get(i));
-                }
-                vertexNodeSelection.clear();
-                vertexNodeSelectionMaterial.clear();
-
-                for (int i = 0; i < edgeNodeSelection.size(); i++) {
-
-                    ((MeshView) edgeNodeSelection.get(i)).setMaterial(edgeNodeSelectionMaterial.get(i));
-                }
-                edgeNodeSelection.clear();
-                edgeNodeSelectionMaterial.clear();
-                
-                for (int i = 0; i < faceNodeSelection.size(); i++) {
+                    for (int i = 0; i < vertexNodeSelection.size(); i++) {
+                        
+                        ((Sphere) vertexNodeSelection.get(i)).setMaterial(vertexNodeSelectionMaterial.get(i));
+                    }
+                    vertexNodeSelection.clear();
+                    vertexNodeSelectionMaterial.clear();
                     
-                    ((MeshView) faceNodeSelection.get(i)).setMaterial(faceNodeSelectionMaterial.get(i));
+                    for (int i = 0; i < edgeNodeSelection.size(); i++) {
+                        
+                        ((MeshView) edgeNodeSelection.get(i)).setMaterial(edgeNodeSelectionMaterial.get(i));
+                    }
+                    edgeNodeSelection.clear();
+                    edgeNodeSelectionMaterial.clear();
                     
-                }
-                faceNodeSelection.clear();
-                faceNodeSelectionMaterial.clear();
-
+                    for (int i = 0; i < faceNodeSelection.size(); i++) {
+                        
+                        ((MeshView) faceNodeSelection.get(i)).setMaterial(faceNodeSelectionMaterial.get(i));
+                        
+                    }
+                    faceNodeSelection.clear();
+                    faceNodeSelectionMaterial.clear();
+              
             }
 
-            System.out.println("Elements in selection :");
+        }
+                    System.out.println("Elements in selection :");
             for (int i = 0; i < nodeList.size(); i++) {
                 System.out.print(nodeList.get(i) + "  ");
-
-                if (vertexMap.containsKey(pickResult)) {
+                
+                    if (vertexMap.containsKey(pickResult)) {
                     float[] resultV = vertexMap.get(vertexNodeSelection.get(i));
                     System.out.println(resultV[0] + " " + resultV[1] + " " + resultV[2]);
                 } else if (edgesMap.containsKey(pickResult)) {
-                    System.out.println(edgesMap.get(pickResult).toString());
+                    System.out.println(edgesMap.get(edgeNodeSelection.get(i)).toString());
                 }else if (faceMapMesh.containsKey(pickResult)){
-                    System.out.println(faceMapMesh.get(pickResult).toString());
+                    System.out.println(faceMapMesh.get(faceNodeSelection.get(i)).toString());
                 }
             }
-        }
         System.out.println("All selected nodes: " + vertexNodeSelection.size() + " vertices. "
                 + edgeNodeSelection.size() + " edges. " + faceNodeSelection.size() + " faces." );
 
@@ -886,6 +1145,31 @@ public class UGXReader {
                 ssNameArray[i] = subsetHandler.getSubsets().get(i).getSubsetName();
             }
             return ssNameArray;
+        }
+        
+        /**Sets the resolution of the rendered objects and determines the level of interaction that is available.
+         * High resolution enables a high level on interaction in which you can select individual vertices/edges/faces but takes longer to load
+         * on big files. This mode is suggested for smaller geometries.
+         * Low resolution is faster but limits the selectable objects to whole subsets only. This mode is suggested for large geometries.
+         * Default value : fals
+     * @param res*/
+        public void setFlagHighResolution(boolean res){
+            highResolution = res;
+        }
+        
+        /**Draws the faces for the edges a second time in reversed winding order to make sure only the front sides will be shown.
+         * Default value : true
+     * @param bool
+         */
+        public void setFlagDoubleFacesOnEdges(boolean bool){
+            doubleFacesOnEdges = bool;
+        }
+        /**Determines if the whole geometry will be rendered (including faces) or just vertices and edges.
+         * Default value : true
+     * @param rfaces
+        */
+        public void setFlagRenderFaces(boolean rfaces){
+            renderFaces = rfaces;
         }
         
 }

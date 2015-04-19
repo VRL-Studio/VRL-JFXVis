@@ -83,7 +83,7 @@ public class Main extends Application{
     
     Text t;
     
-    public static boolean strgPressedDown = false;
+    public static boolean ctrlPressedDown = false;
     
     Group ugxGeometry;
     int ugxSubsetCount;
@@ -184,9 +184,12 @@ public class Main extends Application{
         root.getChildren().add(tire);
         */
         
-        String filePath = "../VRL-JFXVis/src/main/java/edu/gcsc/jfx3d/ugx/bigSpineBigAppBot.ugx";
+        String filePath = "../VRL-JFXVis/src/main/java/edu/gcsc/jfx3d/ugx/lowResSubsetTest.ugx";
         UGXReader ugxr = new UGXReader(filePath);
-        ugxGeometry = ugxr.xbuildUGX(true, true);
+        ugxr.setFlagHighResolution(true);
+        ugxr.setFlagDoubleFacesOnEdges(true);
+        ugxr.setFlagRenderFaces(true);
+        ugxGeometry = ugxr.xbuildUGX();
         subsetNameArray = ugxr.getSubssetNameArray();
         
         root.getChildren().add(ugxGeometry);
@@ -270,7 +273,7 @@ public class Main extends Application{
             }
             
             if (keycode == KeyCode.CONTROL) {
-                strgPressedDown = true;
+                ctrlPressedDown = true;
             }
             
             if(keycode == KeyCode.T){
@@ -298,7 +301,7 @@ public class Main extends Application{
             KeyCode keycode = releaseEvent.getCode();
 
             if (keycode == KeyCode.CONTROL) {
-                strgPressedDown = false;
+                ctrlPressedDown = false;
             }
 
         });
