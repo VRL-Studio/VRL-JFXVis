@@ -189,6 +189,7 @@ public class Main extends Application{
         ugxr.setFlagHighResolution(true);
         ugxr.setFlagDoubleFacesOnEdges(true);
         ugxr.setFlagRenderFaces(true);
+        ugxr.setFlagDebugMode(true);
         ugxGeometry = ugxr.xbuildUGX();
         subsetNameArray = ugxr.getSubssetNameArray();
         

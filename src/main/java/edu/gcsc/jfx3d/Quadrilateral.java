@@ -5,6 +5,8 @@
  */
 package edu.gcsc.jfx3d;
 
+import java.util.ArrayList;
+
 /**
  *
  * @author Eugen
@@ -43,5 +45,12 @@ public class Quadrilateral extends Geometry2D {
         return arr;
     }
     
+    public String getCoordinatesOfPoints(ArrayList listOfAllVertices) {
+        return ("2D Object : " + this.index + " (Part of a quadrilateral)\n"+
+                "Vertex 1: " + listOfAllVertices.get(nodes[0]*3) + " " +listOfAllVertices.get(nodes[0]*3+1) + " " + listOfAllVertices.get(nodes[0]*3+2) + "\n" +
+                "Vertex 2: " + listOfAllVertices.get(nodes[1]*3) + " " +listOfAllVertices.get(nodes[1]*3+1) + " " + listOfAllVertices.get(nodes[1]*3+2) + "\n" +
+                "Vertex 3: " + listOfAllVertices.get(nodes[2]*3) + " " +listOfAllVertices.get(nodes[2]*3+1) + " " + listOfAllVertices.get(nodes[2]*3+2) + "\n" +
+                "Vertex 4: " + listOfAllVertices.get(nodes[3]*3) + " " +listOfAllVertices.get(nodes[3]*3+1) + " " + listOfAllVertices.get(nodes[3]*3+2)  );
+    }
     
 }

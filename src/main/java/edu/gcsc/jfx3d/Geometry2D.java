@@ -5,6 +5,8 @@
  */
 package edu.gcsc.jfx3d;
 
+import java.util.ArrayList;
+
 /**
  *
  * @author Eugen
@@ -18,6 +20,7 @@ public abstract class Geometry2D {
     public abstract void setNodes(int[] array);
     public abstract int[] getFacesArray();
     public abstract int getIndex();
+    public abstract String getCoordinatesOfPoints(ArrayList listOfAllVertices);
     
     
     

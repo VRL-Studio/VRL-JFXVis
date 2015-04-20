@@ -759,7 +759,6 @@ public class UGXReader {
                     faceMeshViewArray[j].setCullFace(CullFace.NONE);
                     
                 }
-                System.out.println("--");
                 for (int j = triangleMeshList.size(), k = 0; k < quadriMeshList.size(); j++,k++) {
                     faceMeshViewArray[j] = quadriMeshList.get(k);
                     faceMeshViewArray[j].setMaterial(faceMat);
@@ -894,7 +893,9 @@ public class UGXReader {
                 Node pickedNode = mouseClick.getPickResult().getIntersectedNode();
                 PickResult res = mouseClick.getPickResult();
 
-                System.out.println(newFaceMap.get(pickedNode));
+                if (debugMode) {
+                    System.out.println(newFaceMap.get(pickedNode));
+                }
                 handleSelection(faceNodeSelection, faceNodeSelectionMaterial, pickedNode, new MeshView());
             }
 
@@ -911,8 +912,10 @@ public class UGXReader {
                 Node pickedNode = mouseClick.getPickResult().getIntersectedNode();
                 PickResult res = mouseClick.getPickResult();
 
-                System.out.println("Selected node is a volume!");
-                System.out.println(newFaceMap.get(pickedNode));
+                if (debugMode) {
+                    System.out.println("Selected node is a volume!");
+                    System.out.println(newFaceMap.get(pickedNode));
+                }
                 handleSelection(faceNodeSelection, faceNodeSelectionMaterial, pickedNode, new MeshView());
             }
 
@@ -927,8 +930,10 @@ public class UGXReader {
             if (mouseClick.getButton().toString().matches("SECONDARY")) {
 
                 Node pickedNode = mouseClick.getPickResult().getIntersectedNode();
-                PickResult res = mouseClick.getPickResult();
-                System.out.println(pickedNode);
+
+                if (debugMode) {
+                    System.out.println(pickedNode);
+                }
 
                 //handleSelection(subsetNodeSelection, subsetNodeSelectionMaterial, pickedNode, new MeshView());
                 handleLowResolutionSelection(pickedNode);
@@ -991,11 +996,13 @@ public class UGXReader {
                     
                 }
             }
-            System.out.print("\nClicked Subset: ");
-                    System.out.println(subsetMapMeshToSubset.get(pickResult).getSubsetName());
-                    UGXsubset testss = subsetMapMeshToSubset.get(pickResult);
-                    
-                    System.out.println("Selected subset is split in the following MeshViews " +subsetMapSubsetToMesh.get(testss));
+            if (debugMode) {
+                System.out.print("\nClicked Subset: ");
+                System.out.println(subsetMapMeshToSubset.get(pickResult).getSubsetName());
+                UGXsubset testss = subsetMapMeshToSubset.get(pickResult);
+                
+                System.out.println("Selected subset is split in the following MeshViews " + subsetMapSubsetToMesh.get(testss));
+            }
         }
     
     private void handleSelection(ArrayList<Node> nodeList, ArrayList<Material> materialList, Node pickResult, Shape3D geometryType) {
@@ -1075,21 +1082,23 @@ public class UGXReader {
             }
 
         }
-                    System.out.println("Elements in selection :");
+           if (debugMode) {
+            System.out.println("Elements in selection :");
             for (int i = 0; i < nodeList.size(); i++) {
-                System.out.print(nodeList.get(i) + "  ");
+                System.out.println(nodeList.get(i) + "  ");
                 
-                    if (vertexMap.containsKey(pickResult)) {
+                if (vertexMap.containsKey(pickResult)) {
                     float[] resultV = vertexMap.get(vertexNodeSelection.get(i));
                     System.out.println(resultV[0] + " " + resultV[1] + " " + resultV[2]);
                 } else if (edgesMap.containsKey(pickResult)) {
                     System.out.println(edgesMap.get(edgeNodeSelection.get(i)).toString());
-                }else if (faceMapMesh.containsKey(pickResult)){
-                    System.out.println(faceMapMesh.get(faceNodeSelection.get(i)).toString());
+                } else if (newFaceMap.containsKey(pickResult)) {                    
+                    System.out.println(newFaceMap.get(faceNodeSelection.get(i)).getCoordinatesOfPoints(globalVertexList));                    
                 }
             }
-        System.out.println("All selected nodes: " + vertexNodeSelection.size() + " vertices. "
-                + edgeNodeSelection.size() + " edges. " + faceNodeSelection.size() + " faces." );
+            System.out.println("\nAll selected nodes: " + vertexNodeSelection.size() + " vertices. "
+                    + edgeNodeSelection.size() + " edges. " + faceNodeSelection.size() + " faces.");
+        }
 
     }
 
@@ -1170,6 +1179,10 @@ public class UGXReader {
         */
         public void setFlagRenderFaces(boolean rfaces){
             renderFaces = rfaces;
+        }
+        
+        public void setFlagDebugMode(boolean debug){
+            debugMode = debug;
         }
         
 }

@@ -5,6 +5,8 @@
  */
 package edu.gcsc.jfx3d;
 
+import java.util.ArrayList;
+
 /**
  *
  * @author Eugen
@@ -40,6 +42,14 @@ public class Triangle extends Geometry2D {
     public int[] getFacesArray() {
         int[] arr = {this.nodes[0],0,this.nodes[1],0,this.nodes[2],0};
         return arr;
+    }
+
+    @Override
+    public String getCoordinatesOfPoints(ArrayList listOfAllVertices) {
+        return ("2D Object : " + this.index + "\n"+
+                "Vertex 1: " + listOfAllVertices.get(nodes[0]*3) + " " +listOfAllVertices.get(nodes[0]*3+1) + " " + listOfAllVertices.get(nodes[0]*3+2) + "\n" +
+                "Vertex 2: " + listOfAllVertices.get(nodes[1]*3) + " " +listOfAllVertices.get(nodes[1]*3+1) + " " + listOfAllVertices.get(nodes[1]*3+2) + "\n" +
+                "Vertex 3: " + listOfAllVertices.get(nodes[2]*3) + " " +listOfAllVertices.get(nodes[2]*3+1) + " " + listOfAllVertices.get(nodes[2]*3+2) + "\n" );
     }
     
 }
