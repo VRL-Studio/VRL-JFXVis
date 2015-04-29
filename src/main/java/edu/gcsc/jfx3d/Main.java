@@ -1,27 +1,43 @@
 package edu.gcsc.jfx3d;
 
 import com.thoughtworks.xstream.annotations.XStreamAlias;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.function.Predicate;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Application;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Point3D;
 import javafx.scene.AmbientLight;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.PointLight;
 import javafx.scene.Scene;
+import javafx.scene.SceneAntialiasing;
+import javafx.scene.SubScene;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.effect.BlendMode;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.PickResult;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
@@ -38,7 +54,9 @@ import javafx.scene.shape.TriangleMesh;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Rotate;
+import javafx.scene.transform.Transform;
 import javafx.scene.transform.Translate;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
     
@@ -50,15 +68,11 @@ public class Main extends Application{
      * @param args the command line arguments
      */
     
-    
-    Group testGroup;
-    
-  
 
     private final double cameraModifier = 20.0;
     private final double cameraQuantity = 0.50;
-    private final double sceneWidth = 600;
-    private final double sceneHeight = 600;
+    private final double sceneWidth = 1028;
+    private final double sceneHeight = 720;
     private double mouseXold = 0;
     private double mouseYold = 0;
     private final double cameraYlimit = 15;
@@ -71,23 +85,25 @@ public class Main extends Application{
     
     String[] subsetNameArray;
     Scene scene;
-    Group pickedGroup;
-    
-    private double scenex, sceney = 0;
-    private double fixedXAngle, fixedYAngle = 0;
-    private final DoubleProperty angleX = new SimpleDoubleProperty(0);
-    private final DoubleProperty angleY = new SimpleDoubleProperty(0);
-      
-    private double anchorAngleX;
-    private double anchorAngleY;
-    
-    Text t;
-    
+    Stage currentStage;
+    Group rootUGX;
+
     public static boolean ctrlPressedDown = false;
     
     Group ugxGeometry;
     int ugxSubsetCount;
     int ugxSwitchCounter = -1;
+    Group ultraRoot; // top node of everything
+    
+    Parent previousPickedNode;
+    
+    private boolean highResolution = false;
+    private boolean doubleFacesOnEdges = true;
+    private boolean renderFaces = true;
+    private boolean debugMode = true;
+    private boolean renderVertices = true;
+    private boolean renderEdges = true;
+    private boolean renderVolumes = true;
     
     public static void main(String[] args) {
         launch(args);
@@ -97,7 +113,9 @@ public class Main extends Application{
     @Override
     public void start(Stage primaryStage) throws Exception {
         try {
-            Group root = createContent();
+            currentStage = primaryStage;
+            ultraRoot = new Group();
+
 
             // Create camera
             PerspectiveCamera camera = new PerspectiveCamera(true);
@@ -110,17 +128,21 @@ public class Main extends Application{
                     new Translate(0, 0, -50));
 
             // add camera as node to scene graph
-            root.getChildren().add(camera);
 
+            VBox guiGroup = addGuiElements();
             // Setup a scene
-            scene = new Scene(root, 1024, 768, true);
+            SubScene subscene = createScene3D(ultraRoot, camera);
+            VBox layout = new VBox( guiGroup, subscene);
+            subscene.heightProperty().bind(layout.heightProperty());
+            subscene.widthProperty().bind(layout.widthProperty());
+            layout.setSpacing(0.0);
+            scene = new Scene(layout, 1024, 768, true);
+            
             scene.setFill(Color.DARKGRAY.darker().darker().darker().darker());
-            scene.setCamera(camera);
-
             //Add the scene to the stage and show the stage
             primaryStage.setScene(scene);
             primaryStage.show();
-            
+
             handleKeyboard(scene, camera);
             handleMouse(scene, camera);                                                                                                                                                                                                                                     
             
@@ -184,12 +206,23 @@ public class Main extends Application{
         root.getChildren().add(tire);
         */
         
-        String filePath = "../VRL-JFXVis/src/main/java/edu/gcsc/jfx3d/ugx/lowResSubsetTest.ugx";
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Open Geometry File");
+        
+        fileChooser.setInitialDirectory(new File(getClass().getResource("../../..").getFile()));
+        FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("UGX files (*.ugx)", "*.ugx");
+        fileChooser.getExtensionFilters().add(extFilter);
+        File file = fileChooser.showOpenDialog(currentStage);
+        
+        ultraRoot.getChildren().clear();
+
+        String filePath = file.getAbsolutePath();
         UGXReader ugxr = new UGXReader(filePath);
-        ugxr.setFlagHighResolution(true);
+        ugxr.setFlagHighResolution(highResolution);
         ugxr.setFlagDoubleFacesOnEdges(true);
-        ugxr.setFlagRenderFaces(true);
-        ugxr.setFlagDebugMode(true);
+        //ugxr.setFlagRenderFaces(true);
+        ugxr.setFlagRenderedElements(renderVertices, renderEdges, renderFaces, renderVolumes);
+        ugxr.setFlagDebugMode(debugMode);
         ugxGeometry = ugxr.xbuildUGX();
         subsetNameArray = ugxr.getSubssetNameArray();
         
@@ -554,6 +587,110 @@ public class Main extends Application{
 
         return customGroup2;
     }
-
     
+    
+    /**Creates a MenuBar filled with several sub menus and returns them as a VBox
+     * 
+    **/
+    private VBox addGuiElements(){
+        
+        MenuBar menuBar = new MenuBar();
+        
+        Menu menuFile = new Menu("File");
+        
+        MenuItem fileOpenNewFile = new MenuItem("Open new file...");
+        
+        MenuItem fileExit = new MenuItem("Exit");
+        
+        fileOpenNewFile.setOnAction(new EventHandler<ActionEvent>() {
+            public void handle(ActionEvent t) {
+                rootUGX = createContent();
+                ultraRoot.getChildren().add(rootUGX);
+            }
+        }); 
+        
+        fileExit.setOnAction(new EventHandler<ActionEvent>() {
+            public void handle(ActionEvent t) {
+                System.exit(0);
+            }
+        }); 
+        
+        menuFile.getItems().addAll(fileOpenNewFile,fileExit);
+        
+        Menu menuSettings = new Menu("Settings");
+        
+        CheckMenuItem settingsHighRes = new CheckMenuItem("High Resolution/Interaction");
+        
+        settingsHighRes.selectedProperty().addListener(new ChangeListener<Boolean>() {
+        public void changed(ObservableValue ov,
+        Boolean old_val, Boolean new_val) {
+            highResolution = new_val;
+        }
+    });
+        
+        CheckMenuItem settingsDebugMode = new CheckMenuItem("Debug Mode");
+        settingsDebugMode.setSelected(true);
+        settingsDebugMode.selectedProperty().addListener(new ChangeListener<Boolean>() {
+        public void changed(ObservableValue ov,
+        Boolean old_val, Boolean new_val) {
+            debugMode = new_val;
+        }
+    });
+        
+        CheckMenuItem settingsShowVertices = new CheckMenuItem("Show Vertices");
+        settingsShowVertices.setSelected(true);
+        settingsShowVertices.selectedProperty().addListener(new ChangeListener<Boolean>() {
+        public void changed(ObservableValue ov,
+        Boolean old_val, Boolean new_val) {
+            renderVertices = new_val;
+        }
+    });
+        
+        CheckMenuItem settingsShowEdges = new CheckMenuItem("Show Edges");
+        settingsShowEdges.setSelected(true);
+        settingsShowEdges.selectedProperty().addListener(new ChangeListener<Boolean>() {
+        public void changed(ObservableValue ov,
+        Boolean old_val, Boolean new_val) {
+            renderEdges = new_val;
+        }
+    });
+        
+        CheckMenuItem settingsShowFaces = new CheckMenuItem("Show Faces");
+        settingsShowFaces.setSelected(true);
+        settingsShowFaces.selectedProperty().addListener(new ChangeListener<Boolean>() {
+        public void changed(ObservableValue ov,
+        Boolean old_val, Boolean new_val) {
+            renderFaces = new_val;
+        }
+    });
+        
+        CheckMenuItem settingsShowVolumes = new CheckMenuItem("Show Volumes");
+        settingsShowVolumes.setSelected(true);
+        settingsShowVolumes.selectedProperty().addListener(new ChangeListener<Boolean>() {
+        public void changed(ObservableValue ov,
+        Boolean old_val, Boolean new_val) {
+            renderVolumes = new_val;
+        }
+    });
+        menuSettings.getItems().addAll(settingsHighRes,settingsDebugMode,settingsShowVertices,settingsShowEdges,settingsShowFaces,settingsShowVolumes);
+        
+        menuBar.getMenus().addAll(menuFile,menuSettings);
+        
+        VBox box = new VBox(menuBar);
+        
+        return box;
+    }
+
+    /**Creates a 3D subscene with a perspectiveCamera, where the specified group node acts as the parent node of
+     * the subscene. Dont forget to make the subscene scale with the size of the whole scene, by binding its size
+     * (mySubscene.heightProperty().bind(myVBox.heightProperty()))
+     **/
+    private SubScene createScene3D(Group group,PerspectiveCamera camera) {
+    SubScene scene3d = new SubScene(group, sceneWidth, sceneHeight, true, SceneAntialiasing.DISABLED);
+    scene3d.setFill(Color.DARKGRAY.darker().darker().darker().darker());
+    scene3d.setCamera(camera);
+
+    return scene3d;
+    
+  }
 }

@@ -68,10 +68,20 @@ public class UGXReader {
     private boolean doubleFacesOnEdges = true;
     private boolean renderFaces = true;
     private boolean debugMode = false;
+    private boolean renderVertices = true;
+    private boolean renderEdges = true;
+    private boolean renderVolumes = true;
     
     ArrayList<Float> globalVertexList = new ArrayList<>();
     boolean strgPressed = false; 
     
+
+
+    /**
+     *Constructor for the UGXReader class.Checks if the given filepath is valid.
+     * 
+     * @param filePath filepath to the target .ugx file
+     */
     public UGXReader(String filePath){
         
         path = filePath;
@@ -93,10 +103,10 @@ public class UGXReader {
     }
 
     /**
-    *reads the content of a .ugx file using the xStream library 
-    * and stores them
+    *reads the content of the .ugx file using the xstream library
+     * @return UGXfile object, containing all information about the given .ugx file
     **/
-    public UGXfile xread(){
+    private UGXfile xread(){
         FileReader filereader = null ;
         
         try {
@@ -136,180 +146,10 @@ public class UGXReader {
         
     }
     
-    /*
-    old read function, using a self made algorithm to read ugx files.
-    does not support all geometries
-    -do not use this function-
-    */
-    private void read(){
-        String[] inputLine;
-        
-        String ssName = "NoName";
-        double[] ssColor = new double[4];
-        int ssState = -1;
-        ArrayList<Integer> ssVertices = new ArrayList<Integer>();
-        ArrayList<Integer> ssEdges = new ArrayList<Integer>();
-        ArrayList<Integer> ssFaces = new ArrayList<Integer>();
-        ArrayList<Integer> ssVolumes = new ArrayList<Integer>();
-        boolean foundSubset = false;
-        
-        
-        try {
-        File file = new File(path);
-       
-        Scanner scanner = new Scanner(file);
-        try {
-            while(scanner.hasNextLine()) {
-
-                inputLine = scanner.nextLine().trim().split(" ");
-                for (int i = 0; i < inputLine.length; i++) {
-                        //System.out.println(inputLine[i] );
-                    }
-               
-                if ( inputLine[0].equalsIgnoreCase("<vertices")) { 
-                    System.out.println("VERTICES");
-                    
-                    inputLine[1]= inputLine[1].split(">")[1];
-                    inputLine[inputLine.length-1]= inputLine[inputLine.length-1].split("<")[0];
-                   
-                    for (int i = 1; i < inputLine.length; i++) {
-                        vertices.add(Float.parseFloat(inputLine[i]));
-                    }
-
-                }
-                if ( inputLine[0].contains("triangles")) {   
-                    System.out.println("TRIANGLES");
-                    inputLine[0]= inputLine[0].split(">")[1];
-                    inputLine[inputLine.length-1]= inputLine[inputLine.length-1].split("<")[0];
-                   
-                    for (int i = 0; i < inputLine.length; i++) {
-                        triangles.add(Integer.parseInt(inputLine[i]));
-                    }
-               
-                }
-                
-                if ( inputLine[0].contains("tetrahedrons")) {   
-                    System.out.println("tetrahedrons");
-                    inputLine[0]= inputLine[0].split(">")[1];
-                    inputLine[inputLine.length-1]= inputLine[inputLine.length-1].split("<")[0];
-                   
-                    for (int i = 0; i < inputLine.length; i++) {
-                        tetra.add(Integer.parseInt(inputLine[i]));
-                    }
-                
-                }
-                
-                
-                if (inputLine[0].equalsIgnoreCase("<subset") && inputLine[1].contains("name")) {
-                    
-                    
-                    ssName = inputLine[1].split("\"")[1];
-                    ssColor[0] = Double.parseDouble(inputLine[2].split("\"")[1]);
-                    ssColor[1] = Double.parseDouble(inputLine[3]);
-                    ssColor[2] = Double.parseDouble(inputLine[4]);
-                    ssColor[3] = Double.parseDouble(inputLine[5].split("\"")[0]);
-                    //ssState = Integer.parseInt(inputLine[6].split("\"")[1]);
-                    foundSubset = true;
-                }
-                if (foundSubset && inputLine[0].contains("vertices")) {
-                    if (inputLine.length == 1) {
-                        ssVertices.add(Integer.parseInt(inputLine[0].substring(10, inputLine[0].length()-11))); //</vertices>
-                    }else{
-                        ssVertices.add(Integer.parseInt(inputLine[0].split(">")[1]));
-                        for (int i = 1; i < inputLine.length - 1; i++) {
-                            ssVertices.add(Integer.parseInt(inputLine[i]));
-                        }
-                        ssVertices.add(Integer.parseInt(inputLine[inputLine.length - 1].split("<")[0]));
-                       
-                    }
-                }
-                
-                if (foundSubset && inputLine[0].contains("edges")) {
-                    if (inputLine.length == 1) {
-                        ssEdges.add(Integer.parseInt(inputLine[0].substring(7, inputLine[0].length()-8)));
-                    }else{
-                        ssEdges.add(Integer.parseInt(inputLine[0].split(">")[1]));
-                        for (int i = 1; i < inputLine.length - 1; i++) {
-                            ssEdges.add(Integer.parseInt(inputLine[i]));
-                        }
-                        ssEdges.add(Integer.parseInt(inputLine[inputLine.length - 1].split("<")[0]));
-                       
-                    }
-                    
-                }
-                
-                if (foundSubset && inputLine[0].contains("faces")) {
-                    if (inputLine.length == 1) {
-                        ssFaces.add(Integer.parseInt(inputLine[0].substring(7, inputLine[0].length()-8)));
-                    }else{
-                        ssFaces.add(Integer.parseInt(inputLine[0].split(">")[1]));
-                        for (int i = 1; i < inputLine.length - 1; i++) {
-                            ssFaces.add(Integer.parseInt(inputLine[i]));
-                        }
-                        ssFaces.add(Integer.parseInt(inputLine[inputLine.length - 1].split("<")[0]));
-                       
-                    }
-                }
-                
-                if (foundSubset && inputLine[0].contains("volumes")) {
-                    if (inputLine.length == 1) {
-                        ssVolumes.add(Integer.parseInt(inputLine[0].substring(9, inputLine[0].length()-10)));
-                    }else{
-                        ssVolumes.add(Integer.parseInt(inputLine[0].split(">")[1]));
-                        for (int i = 1; i < inputLine.length - 1; i++) {
-                            ssVolumes.add(Integer.parseInt(inputLine[i]));
-                        }
-                        ssVolumes.add(Integer.parseInt(inputLine[inputLine.length - 1].split("<")[0]));
-                       
-                    }
-                }
-                
-                
-                ArrayList<Integer> ssVerticesClone = new ArrayList<>(ssVertices);
-                ArrayList<Integer> ssEdgesClone = new ArrayList<>(ssEdges);
-                ArrayList<Integer> ssFacesClone = new ArrayList<>(ssFaces);
-                ArrayList<Integer> ssVolumesClone = new ArrayList<>(ssVolumes);
-                
-                if (foundSubset && inputLine[0].equalsIgnoreCase("</subset>")) {
-                    subsetList.add(new UGXsubset(ssName, ssColor, ssState, ssVerticesClone, ssEdgesClone, ssFacesClone, ssVolumesClone));
-                    
-                    ssName = "NoName";
-                    ssColor = new double[]{1.0,1.0,1.0,1.0};
-                    ssState = -1;
-                    ssVertices.clear();
-                    ssEdges.clear();
-                    ssFaces.clear();
-                    ssVolumes.clear();
-                    foundSubset = false;
-                    
-                }
-                
-                
-                
-            }
-            
-        } finally {
-            scanner.close();  
-            for (int i = 0; i < subsetList.size(); i++) {
-                System.out.print(subsetList.get(i).getSubsetName().toString() + ": ");
-                System.out.print(subsetList.get(i).getVertices().size() + " vertices," +
-                        subsetList.get(i).getEdges().size() + " edges," + subsetList.get(i).getFaces().size() + " faces," +
-                        subsetList.get(i).getVolumes().size() + " volumes," +  " state," + 
-                        subsetList.get(i).getColor()[0] + " " + subsetList.get(i).getColor()[1] + " " +
-                        subsetList.get(i).getColor()[2] + " " + subsetList.get(i).getColor()[3] + " " + "color");
-                System.out.println(" ");
-            }
-            
-        }
-        
-    }   catch (FileNotFoundException ex) {
-        ex.printStackTrace(System.out);
-    } 
-        
-    }
     
-    
-    /**Creates a 3D object from a ugx file using the xStream library with the parameters that were set before using the setFlag* methods  **/
+    /**Creates a group Node representation of the .ugx file with selectable nodes depending on the parameters
+     * that were set before using the setFlag* methods.
+     * @return  group Node visualization of the .ugx file**/
     public Group xbuildUGX (){
         
         UGXfile ugxfile = xread();
@@ -384,7 +224,7 @@ public class UGXReader {
        
         MeshView[] meshViewArray = new MeshView[ssNumber];
         Group subsetGroup = new Group();
-        for (int i = 0; i < ssNumber; i++) {
+        for (int i = 0; i < ssNumber; i++) { //for each subset: visualize all elements in it (vertices,edges,...)
             
             meshArray[i].getPoints().addAll(vertices);
             meshArray[i].getTexCoords().addAll(0,0);
@@ -402,13 +242,13 @@ public class UGXReader {
             ArrayList<MeshView> subsetMeshViewArray = new ArrayList<>();
             
             // start of vertex visualisation
-            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVertices()) {
+            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVertices() && renderVertices) {
                 PhongMaterial sphereMat = new PhongMaterial(new Color(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[0],
                         ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[1],
                         ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[2],
                         Math.abs(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[3])));
 
-                if (highResolution) {
+                if (highResolution) { //high resolution vertex visualization
                     Sphere[] sphereArray = new Sphere[ssVertices.length];
                     for (int j = 0; j < ssVertices.length; j++) {
                         sphereArray[j] = new Sphere(0.075, 4);
@@ -427,7 +267,7 @@ public class UGXReader {
                         vertexMap.put(sphereArray[j], new float[]{x, y, z});
                     }
                     addVertexInteraction(vertexGroup);
-                } else {
+                } else { //low resolution vertex visualization. All vertices are part of only one meshView
 
                     TriangleMesh vertexMesh = new TriangleMesh();
                     vertexMesh.getTexCoords().addAll(0, 0);
@@ -491,7 +331,7 @@ public class UGXReader {
             }// end of vertex visualisation
 
             // start of edge visualisation
-            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasEdges()) {
+            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasEdges() && renderEdges) {
                 TriangleMesh edgesMesh = new TriangleMesh();
                 edgesMesh.getTexCoords().addAll(0, 0);
 
@@ -502,7 +342,8 @@ public class UGXReader {
                         ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[2],
                         Math.abs(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[3])));
 
-                if (highResolution) {
+                if (highResolution) { //high resolution visualization of the edges.
+                    //each edge is a stretched hexaederon
 
                     ArrayList<TriangleMesh> triMesh = new ArrayList<>();
 
@@ -667,6 +508,7 @@ public class UGXReader {
             // start of face visualisation
             if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasFaces() && renderFaces) {
                 if(highResolution){
+                    //each face has to be in a mesh view, so it can be indentified by clicking the mesh view
                     ArrayList<MeshView> quadriMeshList = new ArrayList<>();
                 ArrayList<MeshView> triangleMeshList = new ArrayList<>();
                 ArrayList<TriangleMesh> triMesh = new ArrayList<>();
@@ -679,7 +521,7 @@ public class UGXReader {
                     float[] texCoords = {0,0};
                     triMesh = new ArrayList<>();
                     if (geometry2DList.get(ssFaces[j]).getClass().equals(Quadrilateral.class)) {
-                        
+                        //the current face is part of a quadrilateral
  
                         TriangleMesh mesh1 = new TriangleMesh();
                         // first triangle of the quadrilateral
@@ -777,7 +619,7 @@ public class UGXReader {
             } // end of face visualisation
             
             // start of volume visualisation
-            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVolumes() && renderFaces){
+            if (ugxfile.getSubset_handler().get(0).getSubsets().get(i).isHasVolumes() && renderVolumes){
                 
                 // TODO: IMPLEMENT HIGH RESOLUTION VOLUME RENDERING
                 for (int j = 0; j < ssVolumes.length; j++) {
@@ -853,6 +695,10 @@ public class UGXReader {
         return subsetGroup;
     }
    
+    /**Adds the high resolution vertex interaction to a group, that consists of sphere objects.
+     * Do not use this on the low resolution model.
+     * @param vGroup the group of spheres that should be selectable 
+     **/
     private void addVertexInteraction(Group vGroup) {
 
         vGroup.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseClick -> {
@@ -867,7 +713,11 @@ public class UGXReader {
         }
         );
     }
-
+    
+    /**Adds the high resolution edge interaction to a group, that consists of meshView objects.
+     * Do not use this on the low resolution model.
+     * @param eGroup the group of meshViews (edges/hexahedrons) that should be selectable 
+     **/
     private void addEdgeInteraction(Group eGroup) {
         eGroup.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseClick -> {
             if (mouseClick.getButton().toString().matches("SECONDARY")) {
@@ -884,6 +734,10 @@ public class UGXReader {
     
 
 
+    /**Adds the high resolution face interaction to a group, that consists of meshView objects.
+     * Do not use this on the low resolution model.
+     * @param faceMeshView the group of meshViews (faces) that should be selectable 
+     **/
         private void addFaceInteraction(Group faceMeshView) {
 
         faceMeshView.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseClick -> {
@@ -903,9 +757,14 @@ public class UGXReader {
 
     }
         
-        private void addVolumeInteraction(MeshView faceMeshView) {
+        
+     /**Adds the high resolution volume interaction to a group, that consists of meshView objects.
+     * Do not use this on the low resolution model.
+     * @param volumeMeshView the group of meshViews (volumes) that should be selectable 
+     **/
+        private void addVolumeInteraction(MeshView volumeMeshView) {
 
-        faceMeshView.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseClick -> {
+        volumeMeshView.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseClick -> {
 
             if (mouseClick.getButton().toString().matches("SECONDARY")) {
 
@@ -922,7 +781,10 @@ public class UGXReader {
         });
 
     }
-        
+        /**Adds the low resolution interaction to the low resolution model. 
+         * Do not use this on the high resolution model.
+         * @param shape the node (spheres,MeshViews) that should be selectable
+         **/
         private void addLowResolutionInteraction(Shape3D shape){
             
             shape.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseClick -> {
@@ -942,6 +804,9 @@ public class UGXReader {
         });
         }
         
+        /**Handles the selection for the low resolution model.
+         * @param pickResult the node that was clicked by the user
+         **/
         private void handleLowResolutionSelection(Node pickResult){
             if (!subsetNodeSelection.contains(pickResult)) { 
                 if (!Main.ctrlPressedDown) { //ctrl not pressed and selected node was not selected before -> remove all nodes
@@ -1005,6 +870,12 @@ public class UGXReader {
             }
         }
     
+        /**Handles the selection for the high resolution model.
+         * @param nodeList the arrayList of nodes that stores the selected elements (e.g. a list of Spheres for vertices or a list of meshViews for edges/faces/volumes)
+         * @param materialList the arrayList of materials, that each node has. It is saved so it can be restored later, when user deselected the node
+         * @param pickResult the node, that was selected by the user
+         * @param geometryType the type of the shape, that was selected by the user(e.g. Sphere for vertices or MeshView for edges/faces/volumes)
+         **/
     private void handleSelection(ArrayList<Node> nodeList, ArrayList<Material> materialList, Node pickResult, Shape3D geometryType) {
 
         if (!nodeList.contains(pickResult)) {
@@ -1102,6 +973,9 @@ public class UGXReader {
 
     }
 
+    /** Returns the points of the vertices as a float array, as it was saved in the ugx file.
+     * @return array of all vertices in the ugx file
+     **/
     public float[] getVerticesFloatArray(){
         float[] verticesArray = new float[vertices.size()];
         for (int i = 0; i < vertices.size(); i++) {
@@ -1183,6 +1057,13 @@ public class UGXReader {
         
         public void setFlagDebugMode(boolean debug){
             debugMode = debug;
+        }
+        
+        public void setFlagRenderedElements(boolean showVertices,boolean showEdges,boolean showFaces,boolean showVolumes){
+            renderVertices = showVertices;
+            renderEdges = showEdges;
+            renderFaces = showFaces;
+            renderVolumes = showVolumes;
         }
         
 }
