@@ -13,10 +13,12 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Point3D;
 import javafx.scene.AmbientLight;
+import javafx.scene.DepthTest;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -30,11 +32,15 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.effect.BlendMode;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.PickResult;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
@@ -48,6 +54,7 @@ import javafx.scene.shape.Line;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Polyline;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Shape3D;
 import javafx.scene.shape.Sphere;
 import javafx.scene.shape.TriangleMesh;
@@ -58,8 +65,6 @@ import javafx.scene.transform.Transform;
 import javafx.scene.transform.Translate;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-
-    
 
 
 
@@ -105,9 +110,36 @@ public class Main extends Application{
     private boolean renderEdges = true;
     private boolean renderVolumes = true;
     
+    
+    private double mousePosX;
+    private double mousePosY;
+    private double mouseOldX;
+    private double mouseOldY;
+    private final Rotate rotateX = new Rotate(-20, Rotate.X_AXIS);
+    private final Rotate rotateY = new Rotate(-20, Rotate.Y_AXIS);
+
+    private volatile boolean isPicking=false;
+    private Point3D vecIni, vecPos;
+    private double distance;
+    PerspectiveCamera camera;
+    private Node s;
+    
+    private double mouseDeltaX;
+    private double mouseDeltaY;
+    private boolean dragJustStarted;
+    private boolean firstRun = true;
+    
+    EventHandler mouseB;
+    
+    File file;
+    
+    private ArrayList<Node> renderedUGXGeometries = new ArrayList<>();
+    
     public static void main(String[] args) {
         launch(args);
     }
+    private ArrayList<Rectangle> mousePlaneList = new ArrayList<>();
+    final Rectangle mousePlane = new Rectangle(800, 800, Color.RED);
  
 
     @Override
@@ -118,7 +150,7 @@ public class Main extends Application{
 
 
             // Create camera
-            PerspectiveCamera camera = new PerspectiveCamera(true);
+            camera = new PerspectiveCamera(true);
             camera.setFarClip(100000);
 
             // and position it
@@ -140,11 +172,17 @@ public class Main extends Application{
             
             scene.setFill(Color.DARKGRAY.darker().darker().darker().darker());
             //Add the scene to the stage and show the stage
+            PointLight light2 = new PointLight(Color.LIGHTGRAY);
+        ultraRoot.getChildren().add(light2);
+        light2.getTransforms().add(new Translate(-50, 10, -520));
+
+        AmbientLight light3 = new AmbientLight(new Color(0.35,0.35,0.35,1.0));
+        ultraRoot.getChildren().add(light3);
             primaryStage.setScene(scene);
             primaryStage.show();
 
             handleKeyboard(scene, camera);
-            handleMouse(scene, camera);                                                                                                                                                                                                                                     
+            //handleMouse(scene, camera);                        
             
             
         } catch (Exception e) {
@@ -174,12 +212,7 @@ public class Main extends Application{
         Group root = new Group();
 
         
-        PointLight light2 = new PointLight(Color.LIGHTGRAY);
-        root.getChildren().add(light2);
-        light2.getTransforms().add(new Translate(-50, 10, -520));
-
-        AmbientLight light3 = new AmbientLight(new Color(0.35,0.35,0.35,1.0));
-        root.getChildren().add(light3);
+        
 
 /*
         Group d10 = buildSTL("../JFX3DSample-master/src/main/java/edu/gcsc/jfx3d/STL/hexamail.stl", Color.AQUA, false, true);
@@ -206,15 +239,25 @@ public class Main extends Application{
         root.getChildren().add(tire);
         */
         
+
+        
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Open Geometry File");
         
-        fileChooser.setInitialDirectory(new File(getClass().getResource("../../..").getFile()));
+        //remember last directory
+        if(file != null){
+                    File existDirectory = file.getParentFile();
+                    fileChooser.setInitialDirectory(existDirectory);
+                }else{
+            //or start a few folders above if its opened for the first time
+            fileChooser.setInitialDirectory(new File(getClass().getResource("../../..").getFile()));
+        }
+
         FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("UGX files (*.ugx)", "*.ugx");
         fileChooser.getExtensionFilters().add(extFilter);
-        File file = fileChooser.showOpenDialog(currentStage);
+        file = fileChooser.showOpenDialog(currentStage);
         
-        ultraRoot.getChildren().clear();
+
 
         String filePath = file.getAbsolutePath();
         UGXReader ugxr = new UGXReader(filePath);
@@ -227,10 +270,6 @@ public class Main extends Application{
         subsetNameArray = ugxr.getSubssetNameArray();
         
         root.getChildren().add(ugxGeometry);
-
-        VFX3DUtil.addMouseBehavior(ugxGeometry, ugxGeometry, MouseButton.PRIMARY,
-                Rotate.X_AXIS, Rotate.Y_AXIS);
-
         
         ugxSubsetCount = ugxr.getNumberOfSubsets();
         
@@ -370,178 +409,11 @@ public class Main extends Application{
         }     
         );
         
-       scene.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseClick -> {
-           //Node pickRes = mouseClick.getPickResult().getIntersectedNode();
-           
-           //System.out.println("pickRes "+pickRes );
 
-            
-           
-        }     
-        );
 
     }
     
 
-    private Group buildPyramid(float height, float hypotenuse, Color color, boolean ambient, boolean fill) {
-        final TriangleMesh mesh = new TriangleMesh();
-
-        mesh.getPoints().addAll(
-                0, 0, 0, //Point 0: Top of Pyramid
-                0, height, -hypotenuse / 2, //Point 1: closest base point to camera
-                -hypotenuse / 2, height, 0, //Point 2: leftmost base point to camera
-                hypotenuse / 2, height, 0, //Point 3: farthest base point to camera
-                0, height, hypotenuse / 2 //Point 4: rightmost base point to camera
-        );
-
-        mesh.getTexCoords().addAll(0, 0);
-
-        mesh.getFaces().addAll( //use dummy texCoords
-                0, 0, 2, 0, 1, 0, // Vertical Faces "wind" counter clockwise
-                0, 0, 1, 0, 3, 0, // Vertical Faces "wind" counter clockwise
-                0, 0, 3, 0, 4, 0, // Vertical Faces "wind" counter clockwise
-                0, 0, 4, 0, 2, 0, // Vertical Faces "wind" counter clockwise
-                4, 0, 1, 0, 2, 0, // Base Triangle 1 "wind" clockwise because camera has rotated
-                4, 0, 3, 0, 1, 0 // Base Triangle 2 "wind" clockwise because camera has rotated
-        ); 
-
-        
-        MeshView meshView = new MeshView(mesh);
-
-        meshView.setDrawMode(DrawMode.LINE); //show lines only by default
-        meshView.setCullFace(CullFace.NONE); //Removing culling to show back lines
-
-        Group pyramidGroup = new Group();
-        pyramidGroup.getChildren().add(meshView);
-
-        if (null != color) {
-            PhongMaterial material = new PhongMaterial(color);
-            meshView.setMaterial(material);
-        }
-        if (ambient) {
-            AmbientLight light = new AmbientLight(Color.WHITE);
-            light.getScope().add(meshView);
-            pyramidGroup.getChildren().add(light);
-        }
-        if (fill) {
-            meshView.setDrawMode(DrawMode.FILL);
-        }
-
-        return pyramidGroup;
-    }
-    
-    private Group buildTest( Color color, boolean ambient, boolean filled){
-        
-        TriangleMesh mesh = new TriangleMesh();
-        
-        float[] points = {
-            0,0,0,
-            10,0,0,
-            20,0,0,
-            0,10,0,
-            10,10,0,
-            20,10,0,
-            0,20,0,
-            10,20,0,
-            20,20,0,
-        };
-        
-        float[] texCoords = {0,0};
-        
-        int[] faces = {
-            3,0,0,0,1,0,
-            3,0,1,0,4,0,
-            4,0,1,0,2,0,
-            4,0,2,0,5,0,
-            6,0,3,0,4,0,
-            6,0,4,0,7,0,
-            7,0,4,0,5,0,
-            7,0,5,0,8,0,
-        };
-        
-        mesh.getPoints().setAll(points);
-        mesh.getTexCoords().setAll(texCoords);
-        mesh.getFaces().setAll(faces);
-       
-        MeshView meshView = new MeshView(mesh);
-        
-        meshView.setDrawMode(DrawMode.LINE);
-        meshView.setCullFace(CullFace.NONE);
-        
-        Group customGroup = new Group();
-        customGroup.getChildren().add(meshView);
-
-        if (null != color) {
-            PhongMaterial material = new PhongMaterial(color);
-            meshView.setMaterial(material);
-        }
-        if (ambient) {
-            AmbientLight light = new AmbientLight(Color.WHITE);
-            light.getScope().add(meshView);
-            customGroup.getChildren().add(light);
-        }
-        if (filled) {
-            meshView.setDrawMode(DrawMode.FILL);
-        }
-        return customGroup;
-    }
-    
-    private Group customBuild2 (int arrayXsize,int arrayYsize,int spacing,Color color, boolean ambient, boolean fill){
-        
-        float[][] array = new float[arrayXsize][arrayYsize];
-        
-        for (int i = 0; i < arrayXsize; i++) {
-            for (int j = 0; j < arrayYsize; j++) {
-                array[i][j] = (float) (Math.sin(i)*2);
-                }
-        }
-     
-        
-        TriangleMesh mesh = new TriangleMesh();
-        
-        for (int x = 0; x < arrayXsize; x++) {
-            for (int z = 0; z < arrayYsize; z++) {
-                mesh.getPoints().addAll(x * spacing, array[x][z], z * spacing);
-            }
-        }
-        
-        mesh.getTexCoords().addAll(0,0);
-        
-        int total = arrayXsize * arrayYsize;
-        int nextRow = arrayYsize;
-        
-        for (int i = 0; i < total - nextRow -1; i++) {
-            //Top upper left triangle
-            mesh.getFaces().addAll(i,0,i+nextRow,0,i+1,0);
-            //Top lower right triangle
-            mesh.getFaces().addAll(i+nextRow,0,i+nextRow + 1,0,i+1,0);
-        }
-        
-        MeshView meshView = new MeshView(mesh);
-
-        
-        Group customGroup2 = new Group();
-        customGroup2.getChildren().add(meshView);
-        
-        if (null != color) {
-            PhongMaterial material = new PhongMaterial(color);
-            meshView.setMaterial(material);
-        }
-        if (ambient) {
-            AmbientLight light = new AmbientLight(Color.WHITE);
-            light.getScope().add(meshView);
-            customGroup2.getChildren().add(light);
-        }
-        if(fill) { 
-            meshView.setDrawMode(DrawMode.FILL);
-        } else {
-            meshView.setDrawMode(DrawMode.LINE); //show lines only by default
-        }
-        meshView.setCullFace(CullFace.BACK); //Removing culling to show back lines
-
-        return customGroup2;
-    }
-    
     private Group buildSTL (String filePath,Color color, boolean ambient, boolean fill){
         
         STLReader reader = new STLReader(filePath);
@@ -600,14 +472,41 @@ public class Main extends Application{
         
         MenuItem fileOpenNewFile = new MenuItem("Open new file...");
         
+        MenuItem fileOpenAdditionalFile = new MenuItem("Add file to scene...");
+        
         MenuItem fileExit = new MenuItem("Exit");
         
         fileOpenNewFile.setOnAction(new EventHandler<ActionEvent>() {
             public void handle(ActionEvent t) {
-                rootUGX = createContent();
-                ultraRoot.getChildren().add(rootUGX);
+                for (int i = (ultraRoot.getChildren().size()-1); i > 1 ; i--) {
+                    ultraRoot.getChildren().remove(i);
+                }
+                renderedUGXGeometries.clear();
+                mousePlaneList.clear();
+                mousePlaneList.add(new Rectangle(800, 800, Color.TRANSPARENT));
+                Rectangle rect = setupMousePlane(0);
+                renderedUGXGeometries.add(new Group(enableNewFocusPoint(dragDrop(createContent(),0))));
+               
+                ultraRoot.getChildren().add(rect);
+                ultraRoot.getChildren().add(renderedUGXGeometries.get(0));
+
             }
         }); 
+        
+        fileOpenAdditionalFile.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent event) {
+                int size = renderedUGXGeometries.size();
+                mousePlaneList.add(new Rectangle(800, 800, Color.TRANSPARENT));
+                Rectangle rect = setupMousePlane(size);
+                Group newG = new Group(enableNewFocusPoint(dragDrop(createContent(),size)));
+                renderedUGXGeometries.add(newG);
+
+                ultraRoot.getChildren().addAll(newG,rect);
+
+            }
+        });
         
         fileExit.setOnAction(new EventHandler<ActionEvent>() {
             public void handle(ActionEvent t) {
@@ -615,7 +514,7 @@ public class Main extends Application{
             }
         }); 
         
-        menuFile.getItems().addAll(fileOpenNewFile,fileExit);
+        menuFile.getItems().addAll(fileOpenNewFile,fileOpenAdditionalFile ,fileExit);
         
         Menu menuSettings = new Menu("Settings");
         
@@ -693,4 +592,120 @@ public class Main extends Application{
     return scene3d;
     
   }
+    
+    private Group dragDrop(Node node,int index){
+        
+        
+        node.setOnDragDetected(new EventHandler<MouseEvent>() {
+    @Override public void handle(MouseEvent event) {
+        if (event.isSecondaryButtonDown()) {
+            node.setMouseTransparent(true); // node will not be picked
+            mousePlaneList.get(index).setMouseTransparent(false); // mousePlane will be pickable
+            node.startFullDrag(); // this redirects drag events from the origin (node) to the picked target (which will be mousePlane)
+        }
+    }
+});
+
+
+
+node.setOnMouseReleased(new EventHandler<MouseEvent>() {
+    @Override public void handle(MouseEvent event) {
+        if (!event.isSecondaryButtonDown()) {
+            node.setMouseTransparent(false);
+            mousePlaneList.get(index).setMouseTransparent(true);
+        }
+    }
+});
+
+        mousePlaneList.get(index).setOnMouseDragOver(new EventHandler<MouseDragEvent>() {
+            @Override public void handle(MouseDragEvent event) {
+                if (event.isSecondaryButtonDown()) {
+                    Point3D coords = event.getPickResult().getIntersectedPoint();
+                    double x = coords.getX();
+                    double y = coords.getY();
+                    double z = coords.getZ();
+                    
+                    coords = mousePlaneList.get(index).localToParent(new Point3D(x, y, z)); //mouseplane has the same parent as the real plane and objects like cube
+                    
+                    node.setTranslateX(coords.getX());
+                    node.setTranslateY(coords.getY());
+                    node.setTranslateZ(coords.getZ());
+                }
+            }
+        });
+        
+        return (Group) node;
+
+    }
+    
+    private Rectangle setupMousePlane(int index) {
+
+    mousePlaneList.get(index).setLayoutX(-800 / 2);
+    mousePlaneList.get(index).setLayoutY(-800 / 2);
+    mousePlaneList.get(index).setOpacity(0.7);
+    mousePlaneList.get(index).setMouseTransparent(true);
+    mousePlaneList.get(index).setDepthTest(DepthTest.DISABLE); // this makes the plane to be picked even if there are objects closer to the camera
+
+    mousePlaneList.get(index).setOnMouseDragOver(new EventHandler<MouseDragEvent>() {
+        @Override
+        public void handle(MouseDragEvent me) {
+            if (me.isSecondaryButtonDown() && me.isAltDown()) {
+                //do nothing, we are rotating on the gizmo
+            } else if (me.isSecondaryButtonDown()) {
+                Point3D coords = me.getPickResult().getIntersectedPoint();
+                mouseOldX = mousePosX;
+                mouseOldY = mousePosY;
+                mousePosX = coords.getX();
+                mousePosY = coords.getY();
+
+                double z = coords.getZ();
+
+                coords = mousePlaneList.get(index).localToParent(new Point3D(mousePosX, mousePosY, z)); //mouseplane has the same parent as the real plane and objects like cube
+                mousePosX = coords.getX();
+                mousePosY = coords.getY();
+                mouseDeltaX = (mousePosX - mouseOldX);
+                mouseDeltaY = (mousePosY - mouseOldY);
+
+            }
+        }
+    });
+    return mousePlaneList.get(index);
+}
+    
+    
+    private Group enableNewFocusPoint(Group node){
+
+            //incase a new object was added to the scene, the mouse behavior will be applied to it
+            mouseB = new MouseBehaviorImpl1(node, MouseButton.PRIMARY, Rotate.X_AXIS, Rotate.Y_AXIS);
+            node.addEventHandler(MouseEvent.ANY, mouseB);
+
+        node.addEventFilter(MouseEvent.MOUSE_CLICKED, event -> {
+            
+            if (event.isAltDown() && event.getButton().equals(MouseButton.PRIMARY)) {
+                
+                //remove old rotation anchor, so it wont rotate around multiple points
+                    try {
+                    node.removeEventHandler(MouseEvent.ANY, mouseB);
+                } catch (Exception e) {
+                }
+                    
+                    //set new rotation anchor point
+                    Point3D pt = event.getPickResult().getIntersectedPoint();
+                    
+                    mouseB = new MouseBehaviorImpl1(node, MouseButton.PRIMARY, Rotate.X_AXIS, Rotate.Y_AXIS, pt); 
+                    
+                    node.addEventHandler(MouseEvent.ANY, mouseB);
+
+                    if (debugMode) {
+                        System.out.println("New rotation anchor for " + node.toString() + " was set at \n"+ pt.toString());
+                }
+                }
+           
+        }     
+        );
+        
+
+        return node;
+    }
+    
 }

@@ -239,6 +239,12 @@ public class VFX3DUtil {
         eventReceiver.addEventHandler(MouseEvent.ANY,
                 new MouseBehaviorImpl1(n, btn, firstAxis, secondAxis));
     }
+    
+    public static void addMouseBehavior(
+            Node n, Node eventReceiver, MouseButton btn, Point3D firstAxis, Point3D secondAxis,Point3D pivot) {
+        eventReceiver.addEventHandler(MouseEvent.ANY,
+                new MouseBehaviorImpl1(n, btn, firstAxis, secondAxis,pivot));
+    }
 }
 
 // rotation behavior implementation
@@ -261,6 +267,19 @@ class MouseBehaviorImpl1 implements EventHandler<MouseEvent> {
         rotateX = new Rotate(0, 0, 0, 0, firstAxis);
         rotateZ = new Rotate(0, 0, 0, 0, secondAxis);
 
+        n.getTransforms().addAll(rotateX, rotateZ);
+        this.btn = btn;
+
+        if (btn == null) {
+            this.btn = MouseButton.MIDDLE;
+        }
+    }
+    
+    public MouseBehaviorImpl1(Node n, MouseButton btn, Point3D firstAxis, Point3D secondAxis, Point3D pivot) {
+
+        rotateX = new Rotate(0, pivot.getX(), pivot.getY(), pivot.getZ(), firstAxis);
+        rotateZ = new Rotate(0, pivot.getX(), pivot.getY(), pivot.getZ(), secondAxis);
+        
         n.getTransforms().addAll(rotateX, rotateZ);
         this.btn = btn;
 
