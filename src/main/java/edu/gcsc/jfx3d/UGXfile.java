@@ -12,6 +12,7 @@ import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamImplicit;
 import java.awt.List;
 import java.util.ArrayList;
+import javafx.geometry.Point3D;
 
 
 /**
@@ -53,6 +54,7 @@ public class UGXfile {
     private boolean containsHexahedrons = false;
     private boolean containsPrisms = false;
     private boolean containsPyramids = false;
+    public double biggestDistanceBetweenVertices = 0;
     
     
     private ArrayList<Float> globalVertices = new ArrayList<Float>();
@@ -428,6 +430,7 @@ public class UGXfile {
         } catch (Exception e) {
             System.out.println("No pyramids were found.");
         }
+        calcBiggestDistance();
     }
     
     public float[] getGlobalVerticesArray() {
@@ -490,6 +493,54 @@ public class UGXfile {
         return geometryCounter2D;
     }
 
+        /**Calculates the biggest distance between two vertices in the geometry
+         */
+    private void calcBiggestDistance(){
         
+        if (globalVertices.size() > 10000) {
+            for (int i = 0; i < globalVertices.size() - 6; i += 6) {
+                Point3D p1 = new Point3D(globalVertices.get(i), globalVertices.get(i + 1), globalVertices.get(i + 2));
+                
+                Point3D p2 = new Point3D(globalVertices.get((i + 3)), globalVertices.get((i + 4)), globalVertices.get((i + 5)));
+                
+                if (p1.distance(p2) > biggestDistanceBetweenVertices) {
+                    biggestDistanceBetweenVertices = p1.distance(p2);
+                }
+                
+            }
+
+        } else {
+            Point3D p1;
+            Point3D p2;
+
+        for (int i = 0; i < globalVertices.size()-3; i+=3) {
+            p1 = new Point3D(globalVertices.get(i), globalVertices.get(i+1), globalVertices.get(i+2));
+
+            for (int j = 0; j < globalVertices.size()-3; j+=3) {
+                
+                if (j != i) {
+                    p2 = new Point3D(globalVertices.get((j)), globalVertices.get((j + 1)), globalVertices.get((j + 2)));
+
+                    if (p1.distance(p2) > biggestDistanceBetweenVertices) {
+                        biggestDistanceBetweenVertices = p1.distance(p2);
+                    }
+                    
+                }
+                
+            }
+        }
+
+    }
+        
+    }
+
+    /** Returns the log of the biggest distance between two vertices in the geometry
+     * @return the log of the biggest distance between two vertices 
+    */
+    public double getLogBiggestDistanceBetweenVertices() {
+        return Math.log(biggestDistanceBetweenVertices);
+    }
+    
+    
 
 }

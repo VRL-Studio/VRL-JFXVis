@@ -130,6 +130,7 @@ public class Main extends Application{
     private boolean firstRun = true;
     
     EventHandler mouseB;
+    private ArrayList<EventHandler> mouseBehaviorList = new ArrayList<>();
     
     File file;
     
@@ -273,7 +274,7 @@ public class Main extends Application{
         
         ugxSubsetCount = ugxr.getNumberOfSubsets();
         
-        return root;
+        return enableNewFocusPoint(dragDrop(root,renderedUGXGeometries.size()),renderedUGXGeometries.size());
     }
     
     private void handleKeyboard(Scene scene,PerspectiveCamera camera){
@@ -478,18 +479,7 @@ public class Main extends Application{
         
         fileOpenNewFile.setOnAction(new EventHandler<ActionEvent>() {
             public void handle(ActionEvent t) {
-                for (int i = (ultraRoot.getChildren().size()-1); i > 1 ; i--) {
-                    ultraRoot.getChildren().remove(i);
-                }
-                renderedUGXGeometries.clear();
-                mousePlaneList.clear();
-                mousePlaneList.add(new Rectangle(800, 800, Color.TRANSPARENT));
-                Rectangle rect = setupMousePlane(0);
-                renderedUGXGeometries.add(new Group(enableNewFocusPoint(dragDrop(createContent(),0))));
-               
-                ultraRoot.getChildren().add(rect);
-                ultraRoot.getChildren().add(renderedUGXGeometries.get(0));
-
+                addGeometryToScene(true);
             }
         }); 
         
@@ -497,14 +487,7 @@ public class Main extends Application{
 
             @Override
             public void handle(ActionEvent event) {
-                int size = renderedUGXGeometries.size();
-                mousePlaneList.add(new Rectangle(800, 800, Color.TRANSPARENT));
-                Rectangle rect = setupMousePlane(size);
-                Group newG = new Group(enableNewFocusPoint(dragDrop(createContent(),size)));
-                renderedUGXGeometries.add(newG);
-
-                ultraRoot.getChildren().addAll(newG,rect);
-
+                addGeometryToScene(false);
             }
         });
         
@@ -595,107 +578,104 @@ public class Main extends Application{
     
     private Group dragDrop(Node node,int index){
         
-        
         node.setOnDragDetected(new EventHandler<MouseEvent>() {
-    @Override public void handle(MouseEvent event) {
-        if (event.isSecondaryButtonDown()) {
-            node.setMouseTransparent(true); // node will not be picked
-            mousePlaneList.get(index).setMouseTransparent(false); // mousePlane will be pickable
-            node.startFullDrag(); // this redirects drag events from the origin (node) to the picked target (which will be mousePlane)
-        }
-    }
-});
+            @Override
+            public void handle(MouseEvent event) {
+                if (event.isSecondaryButtonDown()) {
+                    node.setMouseTransparent(true); // node will not be picked
+                    mousePlaneList.get(index).setMouseTransparent(false); // mousePlane will be pickable
+                    node.startFullDrag(); // this redirects drag events from the origin (node) to the picked target (which will be mousePlane)
+                }
+            }
+        });
 
-
-
-node.setOnMouseReleased(new EventHandler<MouseEvent>() {
-    @Override public void handle(MouseEvent event) {
-        if (!event.isSecondaryButtonDown()) {
-            node.setMouseTransparent(false);
-            mousePlaneList.get(index).setMouseTransparent(true);
-        }
-    }
-});
+        node.setOnMouseReleased(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                if (!event.isSecondaryButtonDown()) {
+                    node.setMouseTransparent(false);
+                    mousePlaneList.get(index).setMouseTransparent(true);
+                }
+            }
+        });
 
         mousePlaneList.get(index).setOnMouseDragOver(new EventHandler<MouseDragEvent>() {
-            @Override public void handle(MouseDragEvent event) {
+            @Override
+            public void handle(MouseDragEvent event) {
                 if (event.isSecondaryButtonDown()) {
                     Point3D coords = event.getPickResult().getIntersectedPoint();
                     double x = coords.getX();
                     double y = coords.getY();
                     double z = coords.getZ();
-                    
+
                     coords = mousePlaneList.get(index).localToParent(new Point3D(x, y, z)); //mouseplane has the same parent as the real plane and objects like cube
-                    
+
                     node.setTranslateX(coords.getX());
                     node.setTranslateY(coords.getY());
                     node.setTranslateZ(coords.getZ());
                 }
             }
         });
-        
+
         return (Group) node;
 
     }
-    
+
     private Rectangle setupMousePlane(int index) {
 
-    mousePlaneList.get(index).setLayoutX(-800 / 2);
-    mousePlaneList.get(index).setLayoutY(-800 / 2);
-    mousePlaneList.get(index).setOpacity(0.7);
-    mousePlaneList.get(index).setMouseTransparent(true);
-    mousePlaneList.get(index).setDepthTest(DepthTest.DISABLE); // this makes the plane to be picked even if there are objects closer to the camera
+        mousePlaneList.get(index).setLayoutX(-800 / 2);
+        mousePlaneList.get(index).setLayoutY(-800 / 2);
+        mousePlaneList.get(index).setOpacity(0.7);
+        mousePlaneList.get(index).setMouseTransparent(true);
+        mousePlaneList.get(index).setDepthTest(DepthTest.DISABLE); // this makes the plane to be picked even if there are objects closer to the camera
 
-    mousePlaneList.get(index).setOnMouseDragOver(new EventHandler<MouseDragEvent>() {
-        @Override
-        public void handle(MouseDragEvent me) {
-            if (me.isSecondaryButtonDown() && me.isAltDown()) {
-                //do nothing, we are rotating on the gizmo
-            } else if (me.isSecondaryButtonDown()) {
-                Point3D coords = me.getPickResult().getIntersectedPoint();
-                mouseOldX = mousePosX;
-                mouseOldY = mousePosY;
-                mousePosX = coords.getX();
-                mousePosY = coords.getY();
+        mousePlaneList.get(index).setOnMouseDragOver(new EventHandler<MouseDragEvent>() {
+            @Override
+            public void handle(MouseDragEvent me) {
+                if (me.isSecondaryButtonDown() && me.isAltDown()) {
+                    //do nothing, we are rotating on the gizmo
+                } else if (me.isSecondaryButtonDown()) {
+                    Point3D coords = me.getPickResult().getIntersectedPoint();
+                    mouseOldX = mousePosX;
+                    mouseOldY = mousePosY;
+                    mousePosX = coords.getX();
+                    mousePosY = coords.getY();
 
-                double z = coords.getZ();
+                    double z = coords.getZ();
 
-                coords = mousePlaneList.get(index).localToParent(new Point3D(mousePosX, mousePosY, z)); //mouseplane has the same parent as the real plane and objects like cube
-                mousePosX = coords.getX();
-                mousePosY = coords.getY();
-                mouseDeltaX = (mousePosX - mouseOldX);
-                mouseDeltaY = (mousePosY - mouseOldY);
+                    coords = mousePlaneList.get(index).localToParent(new Point3D(mousePosX, mousePosY, z)); //mouseplane has the same parent as the real plane and objects like cube
+                    mousePosX = coords.getX();
+                    mousePosY = coords.getY();
+                    mouseDeltaX = (mousePosX - mouseOldX);
+                    mouseDeltaY = (mousePosY - mouseOldY);
 
+                }
             }
-        }
-    });
-    return mousePlaneList.get(index);
-}
+        });
+        return mousePlaneList.get(index);
+    }
+
     
-    
-    private Group enableNewFocusPoint(Group node){
+    private Group enableNewFocusPoint(Group node, int index){
 
             //incase a new object was added to the scene, the mouse behavior will be applied to it
-            mouseB = new MouseBehaviorImpl1(node, MouseButton.PRIMARY, Rotate.X_AXIS, Rotate.Y_AXIS);
-            node.addEventHandler(MouseEvent.ANY, mouseB);
+            mouseBehaviorList.add(new MouseBehaviorImpl1(node, MouseButton.PRIMARY, Rotate.X_AXIS, Rotate.Y_AXIS)) ;
+            node.addEventHandler(MouseEvent.ANY, mouseBehaviorList.get(mouseBehaviorList.size()-1));
 
         node.addEventFilter(MouseEvent.MOUSE_CLICKED, event -> {
-            
-            if (event.isAltDown() && event.getButton().equals(MouseButton.PRIMARY)) {
-                
+            if (event.isAltDown() && event.getButton().equals(MouseButton.PRIMARY)   ) {
                 //remove old rotation anchor, so it wont rotate around multiple points
-                    try {
-                    node.removeEventHandler(MouseEvent.ANY, mouseB);
-                } catch (Exception e) {
-                }
-                    
+
+                    node.removeEventHandler(MouseEvent.ANY, mouseBehaviorList.get(index));
                     //set new rotation anchor point
                     Point3D pt = event.getPickResult().getIntersectedPoint();
                     
                     mouseB = new MouseBehaviorImpl1(node, MouseButton.PRIMARY, Rotate.X_AXIS, Rotate.Y_AXIS, pt); 
                     
                     node.addEventHandler(MouseEvent.ANY, mouseB);
-
+                    
+                    mouseBehaviorList.set(index, mouseB);
+               
                     if (debugMode) {
                         System.out.println("New rotation anchor for " + node.toString() + " was set at \n"+ pt.toString());
                 }
@@ -706,6 +686,37 @@ node.setOnMouseReleased(new EventHandler<MouseEvent>() {
         
 
         return node;
+    }
+    
+    private void addGeometryToScene(boolean replaceOldScene){
+        
+        if (replaceOldScene) {
+            for (int i = (ultraRoot.getChildren().size()-1); i > 1 ; i--) { //remove every node exept the light 
+                    ultraRoot.getChildren().remove(i);
+                }
+                mouseBehaviorList.clear();
+                renderedUGXGeometries.clear();
+                mousePlaneList.clear();
+                mousePlaneList.add(new Rectangle(800, 800, Color.TRANSPARENT));
+                Rectangle rect = setupMousePlane(0);
+                renderedUGXGeometries.add(new Group(createContent()));
+               
+                ultraRoot.getChildren().add(rect);
+                ultraRoot.getChildren().add(renderedUGXGeometries.get(0));
+        }else{
+            
+            int size = renderedUGXGeometries.size();
+                mousePlaneList.add(new Rectangle(800, 800, Color.TRANSPARENT));
+                Rectangle rect = setupMousePlane(size);
+                Group newG = new Group(createContent());
+                
+                renderedUGXGeometries.add(newG);
+
+                ultraRoot.getChildren().addAll(newG,rect);
+            
+            
+        }
+        
     }
     
 }

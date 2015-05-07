@@ -251,7 +251,7 @@ public class UGXReader {
                 if (highResolution) { //high resolution vertex visualization
                     Sphere[] sphereArray = new Sphere[ssVertices.length];
                     for (int j = 0; j < ssVertices.length; j++) {
-                        sphereArray[j] = new Sphere(0.075, 4);
+                        sphereArray[j] = new Sphere(0.03*ugxfile.getLogBiggestDistanceBetweenVertices(), 4);
 
                         float x = vertices[ssVertices[j] * 3];
                         float y = vertices[ssVertices[j] * 3 + 1];
@@ -272,7 +272,7 @@ public class UGXReader {
                     TriangleMesh vertexMesh = new TriangleMesh();
                     vertexMesh.getTexCoords().addAll(0, 0);
 
-                    float width = 0.03f;
+                    float width = (float) (0.02f * ugxfile.getLogBiggestDistanceBetweenVertices());
 
                     for (int j = 0; j < ssVertices.length; j++) {
 
@@ -335,7 +335,7 @@ public class UGXReader {
                 TriangleMesh edgesMesh = new TriangleMesh();
                 edgesMesh.getTexCoords().addAll(0, 0);
 
-                float width = 0.02f;
+                float width = (float) (0.01f * ugxfile.getLogBiggestDistanceBetweenVertices());
 
                 PhongMaterial edgeMat = new PhongMaterial(new Color(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[0],
                         ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[1],
