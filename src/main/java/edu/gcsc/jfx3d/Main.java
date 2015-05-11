@@ -1,5 +1,6 @@
 package edu.gcsc.jfx3d;
 
+import com.leapmotion.leap.Controller;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import java.io.File;
 import java.io.IOException;
@@ -65,6 +66,10 @@ import javafx.scene.transform.Transform;
 import javafx.scene.transform.Translate;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import com.leapmotion.leap.*;
+import java.util.Random;
+import javafx.application.Platform;
+import javafx.scene.transform.Scale;
 
 
 
@@ -129,6 +134,15 @@ public class Main extends Application{
     private boolean dragJustStarted;
     private boolean firstRun = true;
     
+    LeapMotionListener listener ;
+    Controller controller;
+    Group handGroup = new Group();
+    PhongMaterial handSphereMat = new PhongMaterial(Color.RED);
+    Random rand = new Random(System.currentTimeMillis());
+    
+    Vector yNegVector = new Vector(0, -1, 0);
+    Cylinder[] cArray = new Cylinder[60]; //max number of hands simultaniously on the screen = amountOfHands * 15. (eg. 30 equals 2 hands)(each hand has 15 cylinder)
+    
     EventHandler mouseB;
     private ArrayList<EventHandler> mouseBehaviorList = new ArrayList<>();
     
@@ -141,8 +155,8 @@ public class Main extends Application{
     }
     private ArrayList<Rectangle> mousePlaneList = new ArrayList<>();
     final Rectangle mousePlane = new Rectangle(800, 800, Color.RED);
+    
  
-
     @Override
     public void start(Stage primaryStage) throws Exception {
         try {
@@ -183,14 +197,23 @@ public class Main extends Application{
             primaryStage.show();
 
             handleKeyboard(scene, camera);
-            //handleMouse(scene, camera);                        
+            //handleMouse(scene, camera);   
             
+
+            listener = new LeapMotionListener();
+            controller = new Controller();
+
+            controller.addListener(listener);
+            addGlobalLeapMotionPropertyListener();
+            
+            for (int i = 0; i < cArray.length; i++) { //initialize the cylinder array for the hand bones
+                cArray[i] = new Cylinder(1, 1, 20); //using a fixed size array for the hand bones avoids memory issues
+            }                                       //but limits the max. amount of hands that can be registered at the same time
             
         } catch (Exception e) {
             e.printStackTrace(System.out);
             System.exit(1);
         }
-        
         
         
     }
@@ -575,7 +598,12 @@ public class Main extends Application{
     return scene3d;
     
   }
-    
+    /**Enables the node to be dragged around the screen with the mouse by using an invisible 2D rectangle that registers the dragging and converts the
+     * movement to the node.
+     * Use this method together with setupMousePlane, using the same index to make a node draggable.
+     * @param node the node that should be draggable
+     * @param index the index of the object on the scene
+     */
     private Group dragDrop(Node node,int index){
         
         node.setOnDragDetected(new EventHandler<MouseEvent>() {
@@ -620,7 +648,12 @@ public class Main extends Application{
         return (Group) node;
 
     }
-
+    
+    /** Sets up the invisible mouse plane that is needed for the dragging of nodes on the scene using the mouse.
+     * The index of the mouse plane should be the same as the index for enableNewFocusPoint.
+     * @param index the index of the rectangle in a rectangle list that will be used for dragging that specific object
+     * 
+     */
     private Rectangle setupMousePlane(int index) {
 
         mousePlaneList.get(index).setLayoutX(-800 / 2);
@@ -655,7 +688,11 @@ public class Main extends Application{
         return mousePlaneList.get(index);
     }
 
-    
+    /**Allows to set a new rotation focus point on a group by clicking on it, while the alt key is down.
+     * The index should be the same as the index for setupMousePlane.
+     * @param node the group node that should be able to have a new rotation point
+     * @param index the index of the specific mouse behaviour for that specific node (each geometry has exactly 1 mouse behaviour)
+     */
     private Group enableNewFocusPoint(Group node, int index){
 
             //incase a new object was added to the scene, the mouse behavior will be applied to it
@@ -702,7 +739,10 @@ public class Main extends Application{
                 renderedUGXGeometries.add(new Group(createContent()));
                
                 ultraRoot.getChildren().add(rect);
-                ultraRoot.getChildren().add(renderedUGXGeometries.get(0));
+                ultraRoot.getChildren().add(new Group(renderedUGXGeometries.get(0)));
+                
+                addNodeLeapMotionPropertyListener(renderedUGXGeometries.get(0));
+                
         }else{
             
             int size = renderedUGXGeometries.size();
@@ -711,12 +751,141 @@ public class Main extends Application{
                 Group newG = new Group(createContent());
                 
                 renderedUGXGeometries.add(newG);
+                addNodeLeapMotionPropertyListener(renderedUGXGeometries.get(size));
 
                 ultraRoot.getChildren().addAll(newG,rect);
-            
-            
         }
         
+    }
+    
+
+    /**Adds the hand model to the scene and updates it with the most recent information on the hand location.
+     */
+    private void addGlobalLeapMotionPropertyListener(){
+        
+        //listen to changed positions of the hand and add the model to the view
+                listener.fingerChangedProperty().addListener((ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) -> {
+                if (newValue) {
+                    
+                    ArrayList<Bone> bones = listener.getBones();
+                    
+                    Platform.runLater(() -> { //javaFX thread
+
+                        handGroup.getChildren().clear();
+                        
+                        int i = 0;
+                        for (Bone b : bones) {
+                            
+                            {
+                                final Vector p = b.center();
+                                // create bone as a vertical cylinder and locate it at its center position
+                                
+                                cArray[i].setRadius(b.width()/3); // use the cylinder in the cArray, DO NOT create new cylinders every frame as it would
+                                cArray[i].setHeight(b.length()); // lead to memory issues
+                                cArray[i].getTransforms().clear(); // remove all previous transforms
+                                
+                                cArray[i].setMaterial(handSphereMat);
+
+                                // translate and rotate the cylinder towards its direction
+                                {
+                                    final Vector v2 = b.direction();
+                                    Vector vDirection = new Vector(v2.getX(), -v2.getY(), -v2.getZ());
+                                    Vector cross2 = vDirection.cross(yNegVector);
+                                    double ang2 = vDirection.angleTo(yNegVector);
+                                    Translate translateToMiddle = new Translate(p.getX(), -p.getY() + 200, -p.getZ());
+                                    Point3D crossProd = new Point3D(cross2.getX(), -cross2.getY(), cross2.getZ()); 
+                                    Rotate rotateToConnectFingers = new Rotate(-Math.toDegrees(ang2), 0, 0, 0, crossProd);
+                                    cArray[i].getTransforms().addAll(translateToMiddle,rotateToConnectFingers);
+                                }
+                                cArray[i].setScaleX(0.1);
+                                cArray[i].setScaleY(0.1);
+                                cArray[i].setScaleZ(0.1);
+
+                                handGroup.getChildren().addAll(cArray[i]);
+                                i++;
+                            }
+                        }
+                        if (!ultraRoot.getChildren().contains(handGroup)) {
+                            ultraRoot.getChildren().add(handGroup);
+                        }
+                    });
+                }
+            });
+
+            listener.handVisibleProperty().addListener((ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) -> {
+                //remove the hand model from the scene when there is no hand visible for the leap motion device
+                if (!newValue) {
+                    Platform.runLater(() -> {
+                        if (debugMode) {
+                            System.out.println("Hands out of view");
+                        }
+                        ultraRoot.getChildren().remove(handGroup);
+                        handGroup.getChildren().clear();
+                        handSphereMat.setDiffuseColor(new Color(rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), 1));
+                        listener.clearInfo();
+                    });
+                }
+            });
+        
+        
+        
+    }
+    
+    /** Adds predefined property listeners to the leap motion listener, attached to node n.
+     * 
+     * @param n the node that should be affected by the leap motion gestures
+     */
+    private void addNodeLeapMotionPropertyListener(Node n){
+        
+        listener.posHandLeftProperty().addListener((ObservableValue<? extends Point3D> ov, Point3D t, final Point3D t1) -> {
+                    Platform.runLater(() -> {
+                        if(t1!=null){
+                            double roll=listener.rollLeftProperty().get();
+                            double pitch=-listener.pitchLeftProperty().get();
+                            double yaw=-listener.yawLeftProperty().get();
+                            matrixRotateNode(n,roll/2,pitch/2,yaw/2);
+                        }
+                    });
+            });
+        
+       listener.palmZcoordinatePropery().addListener((ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
+           
+           double z = (double) newValue;
+           
+           Platform.runLater(() -> {
+               Translate t = new Translate(0, 0, -z/8);
+               n.getParent().getTransforms().setAll(t);
+           });
+        });
+    }
+    
+    /**Rotates a node by using a matrix.
+     * Credits to José Pereda (http://jperedadnr.blogspot.de/)
+     * 
+     * @param n the node that needs to be rotated
+     * @param alf rotation around x axis
+     * @param bet rotation around y axis
+     * @param gam rotation around z axis
+    */
+    private void matrixRotateNode(Node n, double alf, double bet, double gam){
+        double A11=Math.cos(alf)*Math.cos(gam);
+        double A12=Math.cos(bet)*Math.sin(alf)+Math.cos(alf)*Math.sin(bet)*Math.sin(gam);
+        double A13=Math.sin(alf)*Math.sin(bet)-Math.cos(alf)*Math.cos(bet)*Math.sin(gam);
+        double A21=-Math.cos(gam)*Math.sin(alf);
+        double A22=Math.cos(alf)*Math.cos(bet)-Math.sin(alf)*Math.sin(bet)*Math.sin(gam);
+        double A23=Math.cos(alf)*Math.sin(bet)+Math.cos(bet)*Math.sin(alf)*Math.sin(gam);
+        double A31=Math.sin(gam);
+        double A32=-Math.cos(gam)*Math.sin(bet);
+        double A33=Math.cos(bet)*Math.cos(gam);
+         
+        double d = Math.acos((A11+A22+A33-1.0)/2.0);
+        if(d!=0){
+            double den=2d*Math.sin(d);
+            Point3D p= new Point3D((A32-A23)/den,(A13-A31)/den,(A21-A12)/den);
+            n.setRotationAxis(p);
+            n.setRotate(Math.toDegrees(d)); 
+            
+        }
     }
     
 }
