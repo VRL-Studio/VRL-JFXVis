@@ -1,22 +1,14 @@
 package edu.gcsc.jfx3d;
 
 import com.leapmotion.leap.Controller;
-import com.thoughtworks.xstream.annotations.XStreamAlias;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.function.Predicate;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.application.Application;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.geometry.Point3D;
 import javafx.scene.AmbientLight;
 import javafx.scene.DepthTest;
@@ -32,18 +24,11 @@ import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
-import javafx.scene.effect.BlendMode;
-import javafx.scene.input.ClipboardContent;
-import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.input.PickResult;
-import javafx.scene.input.TransferMode;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
@@ -53,8 +38,6 @@ import javafx.scene.shape.Cylinder;
 import javafx.scene.shape.DrawMode;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.MeshView;
-import javafx.scene.shape.MoveTo;
-import javafx.scene.shape.Polyline;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Shape3D;
 import javafx.scene.shape.Sphere;
@@ -68,8 +51,14 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import com.leapmotion.leap.*;
 import java.util.Random;
+import javafx.animation.Animation;
+import javafx.animation.RotateTransition;
 import javafx.application.Platform;
+import javafx.geometry.Bounds;
+import javafx.geometry.Point2D;
+import javafx.scene.shape.Circle;
 import javafx.scene.transform.Scale;
+import javafx.util.Duration;
 
 
 
@@ -120,25 +109,23 @@ public class Main extends Application{
     private double mousePosY;
     private double mouseOldX;
     private double mouseOldY;
-    private final Rotate rotateX = new Rotate(-20, Rotate.X_AXIS);
-    private final Rotate rotateY = new Rotate(-20, Rotate.Y_AXIS);
 
-    private volatile boolean isPicking=false;
-    private Point3D vecIni, vecPos;
-    private double distance;
     PerspectiveCamera camera;
-    private Node s;
     
     private double mouseDeltaX;
     private double mouseDeltaY;
-    private boolean dragJustStarted;
-    private boolean firstRun = true;
     
     LeapMotionListener listener ;
     Controller controller;
     Group handGroup = new Group();
     PhongMaterial handSphereMat = new PhongMaterial(Color.RED);
     Random rand = new Random(System.currentTimeMillis());
+    Group rGroup = new Group();
+    double palmZ ;
+    UGXReader ugxReader;
+    com.sun.glass.ui.Robot wall_e = com.sun.glass.ui.Application.GetApplication().createRobot();
+    long lastTap;
+    RotateTransition rotateAnimation = new RotateTransition();
     
     Vector yNegVector = new Vector(0, -1, 0);
     Cylinder[] cArray = new Cylinder[60]; //max number of hands simultaniously on the screen = amountOfHands * 15. (eg. 30 equals 2 hands)(each hand has 15 cylinder)
@@ -188,11 +175,11 @@ public class Main extends Application{
             scene.setFill(Color.DARKGRAY.darker().darker().darker().darker());
             //Add the scene to the stage and show the stage
             PointLight light2 = new PointLight(Color.LIGHTGRAY);
-        ultraRoot.getChildren().add(light2);
-        light2.getTransforms().add(new Translate(-50, 10, -520));
+            ultraRoot.getChildren().add(light2);
+            light2.getTransforms().add(new Translate(-50, 10, -520));
 
-        AmbientLight light3 = new AmbientLight(new Color(0.35,0.35,0.35,1.0));
-        ultraRoot.getChildren().add(light3);
+            AmbientLight light3 = new AmbientLight(new Color(0.35,0.35,0.35,1.0));
+            ultraRoot.getChildren().add(light3);
             primaryStage.setScene(scene);
             primaryStage.show();
 
@@ -208,7 +195,8 @@ public class Main extends Application{
             
             for (int i = 0; i < cArray.length; i++) { //initialize the cylinder array for the hand bones
                 cArray[i] = new Cylinder(1, 1, 20); //using a fixed size array for the hand bones avoids memory issues
-            }                                       //but limits the max. amount of hands that can be registered at the same time
+                cArray[i].setMouseTransparent(true); //but limits the max. amount of hands that can be registered at the same time
+            }                                       //set it mouse transparent, so that it wont block the mouse click events by the robot
             
         } catch (Exception e) {
             e.printStackTrace(System.out);
@@ -224,12 +212,9 @@ public class Main extends Application{
     }
     
     /**
-     * Creates a sphere with the specified resolution.
+     * Creates a group node visualization of a ugx file that was chosen by the user.
      *
-     * @param radius sphere radius
-     * @param resolution resolution (high resolution results in high number of
-     * triangles)
-     * @return groupcontaining the sphere.
+     * @return group containing the ugx geometry with listeners that enable the node to be dragged and set new anchor points.
      */
     public Group createContent() {
 
@@ -292,7 +277,7 @@ public class Main extends Application{
         ugxr.setFlagDebugMode(debugMode);
         ugxGeometry = ugxr.xbuildUGX();
         subsetNameArray = ugxr.getSubssetNameArray();
-        
+        ugxReader = ugxr;
         root.getChildren().add(ugxGeometry);
         
         ugxSubsetCount = ugxr.getNumberOfSubsets();
@@ -725,6 +710,9 @@ public class Main extends Application{
         return node;
     }
     
+    /**Adds a new visualization of a file to the screen by either replacing all other geometries or just adding it to the scene.
+     * @param replaceOldScene true if the next rendered geometry should be the only one on the scene. false if it should just be added to the scene
+     */
     private void addGeometryToScene(boolean replaceOldScene){
         
         if (replaceOldScene) {
@@ -736,7 +724,7 @@ public class Main extends Application{
                 mousePlaneList.clear();
                 mousePlaneList.add(new Rectangle(800, 800, Color.TRANSPARENT));
                 Rectangle rect = setupMousePlane(0);
-                renderedUGXGeometries.add(new Group(createContent()));
+                renderedUGXGeometries.add(createContent());
                
                 ultraRoot.getChildren().add(rect);
                 ultraRoot.getChildren().add(new Group(renderedUGXGeometries.get(0)));
@@ -780,7 +768,7 @@ public class Main extends Application{
                                 final Vector p = b.center();
                                 // create bone as a vertical cylinder and locate it at its center position
                                 
-                                cArray[i].setRadius(b.width()/3); // use the cylinder in the cArray, DO NOT create new cylinders every frame as it would
+                                cArray[i].setRadius(b.width()/4); // use the cylinder in the cArray, DO NOT create new cylinders every frame as it would
                                 cArray[i].setHeight(b.length()); // lead to memory issues
                                 cArray[i].getTransforms().clear(); // remove all previous transforms
                                 
@@ -807,6 +795,9 @@ public class Main extends Application{
                         }
                         if (!ultraRoot.getChildren().contains(handGroup)) {
                             ultraRoot.getChildren().add(handGroup);
+                            if (debugMode) {
+                                System.out.println("Handgroup  " + handGroup.toString() + " entered the view.");
+                            }
                         }
                     });
                 }
@@ -847,18 +838,81 @@ public class Main extends Application{
                         }
                     });
             });
-        
-       listener.palmZcoordinatePropery().addListener((ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
-           
-           double z = (double) newValue;
-           
-           Platform.runLater(() -> {
-               Translate t = new Translate(0, 0, -z/8);
-               n.getParent().getTransforms().setAll(t);
-           });
+
+        listener.palmZcoordinatePropery().addListener((ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
+
+            palmZ = (double) newValue;
+
+            Platform.runLater(() -> {
+
+                int index = ultraRoot.getChildren().indexOf(handGroup);
+                Group tempHandGroup = (Group) ultraRoot.getChildren().get(index);
+                rGroup.getChildren().clear();
+
+                for (Node cylinderNode : tempHandGroup.getChildren()) {
+
+                    if (tempHandGroup.getChildren().indexOf(cylinderNode) % 15 == 5) { //only detect the cylinder that represents the tip of the index finger
+                        Bounds b = cylinderNode.localToScreen(cylinderNode.getBoundsInLocal());
+                        if (b.intersects(n.localToScreen(n.getBoundsInLocal()))) {
+
+                            Circle r = new Circle((cylinderNode.getBoundsInParent().getMinX() + cylinderNode.getBoundsInParent().getMaxX() + 1) / 2,
+                                    (cylinderNode.getBoundsInParent().getMinY() + cylinderNode.getBoundsInParent().getMaxY() - 1) / 2,
+                                    (cylinderNode.getBoundsInParent().getHeight() + cylinderNode.getBoundsInParent().getWidth()) / 4, Color.RED);
+
+                            r.setFill(Color.RED);
+                            ((Cylinder) cylinderNode).setMaterial(new PhongMaterial(Color.WHITESMOKE));
+                            
+                            r.setOpacity(0.75);
+                            rGroup.getChildren().add(r);
+                            //FXRobot wall_e = new BaseFXRobot(scene) ;
+                            Point2D screenCoordinates = cylinderNode.localToScreen(new Point2D(cylinderNode.getTranslateX(), cylinderNode.getTranslateY()));
+                            wall_e.mouseMove((int) screenCoordinates.getX(), (int) screenCoordinates.getY());
+                            if (listener.keyTapMiddleFingerProperty().get() && controller.frame().id() - lastTap > 20) {
+
+                                if (debugMode) {
+                                    System.out.println("Clicked screen coordinates " + screenCoordinates.toString());
+                                }
+
+                           // TODO DISABLE THE HIGHLIGHT OF THE INDEX FINGER WITH THE LEFT HAND
+                                wall_e.mousePress(2); //press right mouse button
+
+                                wall_e.mouseRelease(2); //release right mouse button
+                                lastTap = controller.frame().id();
+                            }
+                        }
+                    }
+                }
+                if (!ultraRoot.getChildren().contains(rGroup)) {
+                    ultraRoot.getChildren().add(rGroup);
+                }
+            });
+        });
+
+        listener.circleGestureVectorProperty().addListener((ObservableValue<? extends Point3D> observable, Point3D oldValue, Point3D newValue) -> {
+            Platform.runLater(() -> {
+                if (newValue.getX() != oldValue.getX() && rotateAnimation.getStatus() == Animation.Status.STOPPED
+                        && controller.frame().id() - lastTap > 70) { //minimum of 70 frames before it will accept new circle gestures
+                    
+                    rotateAnimation.setNode(n);
+                    rotateAnimation.setAxis(newValue);
+                    rotateAnimation.setDuration(Duration.seconds(3));
+                    rotateAnimation.setByAngle(360);
+                    
+                    rotateAnimation.play();
+                    lastTap = controller.frame().id();
+                    
+                } else if (newValue.getX() != oldValue.getX() && rotateAnimation.getStatus() == Animation.Status.RUNNING
+                        && controller.frame().id() - lastTap > 70) { //stop animation if another circle gesture is detected during the runtime
+                    rotateAnimation.stop();
+                    lastTap = controller.frame().id();
+                    if (debugMode) {
+                        System.out.println("Animation stopped");
+                    }
+                }
+            });
         });
     }
-    
+
     /**Rotates a node by using a matrix.
      * Credits to José Pereda (http://jperedadnr.blogspot.de/)
      * 
@@ -884,6 +938,7 @@ public class Main extends Application{
             Point3D p= new Point3D((A32-A23)/den,(A13-A31)/den,(A21-A12)/den);
             n.setRotationAxis(p);
             n.setRotate(Math.toDegrees(d)); 
+            n.setTranslateZ(-palmZ/8);
             
         }
     }

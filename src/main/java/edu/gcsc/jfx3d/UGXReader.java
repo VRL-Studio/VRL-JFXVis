@@ -794,7 +794,7 @@ public class UGXReader {
                 Node pickedNode = mouseClick.getPickResult().getIntersectedNode();
 
                 if (debugMode) {
-                    System.out.println(pickedNode);
+                    System.out.println("CLICKED NODE "+pickedNode);
                 }
 
                 //handleSelection(subsetNodeSelection, subsetNodeSelectionMaterial, pickedNode, new MeshView());
