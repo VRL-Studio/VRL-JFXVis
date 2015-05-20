@@ -37,15 +37,21 @@ class LeapMotionListener extends Listener {
     private final LimitQueue<Double> yawLeftAverage = new LimitQueue<>(10);
     
     private final DoubleProperty palmZcoordinates = new SimpleDoubleProperty(0);
+    private final DoubleProperty rightPalmZcoordinates = new SimpleDoubleProperty(0);
+    private final DoubleProperty leftHandConfidence = new SimpleDoubleProperty();
+    private final DoubleProperty rightHandConfidence = new SimpleDoubleProperty();
     
     private final BooleanProperty fingerChanged= new SimpleBooleanProperty(false);
-    private final ArrayList<Bone> bones=new ArrayList<>();
+    private final BooleanProperty rightFingerChanged= new SimpleBooleanProperty(false);
+    private final ArrayList<Bone> leftHandBones=new ArrayList<>();
+    private final ArrayList<Bone> rightHandBones = new ArrayList<>();
 
     private final ObjectProperty<Point2D> point=new SimpleObjectProperty<>();
     
     private final LimitQueue<Vector> positionAverage = new LimitQueue<>(10);
 
-    private final BooleanProperty handVisible = new SimpleBooleanProperty(false);
+    private final BooleanProperty leftHandVisible = new SimpleBooleanProperty(false);
+    private final BooleanProperty rightHandVisible = new SimpleBooleanProperty(false);
     private final Vector pos = new Vector(0, 0, 0);
     
     private final BooleanProperty keyTapMiddleFinger = new SimpleBooleanProperty(false);
@@ -64,8 +70,8 @@ class LeapMotionListener extends Listener {
 //        controller.enableGesture(Gesture.Type.TYPE_SCREEN_TAP);
         controller.enableGesture(Gesture.Type.TYPE_KEY_TAP);
         circleGestureVector.set(Point3D.ZERO);
-        controller.config().setFloat("Gesture.Circle.MinRadius", 35.0f);
-        controller.config().setFloat("Gesture.Circle.MinArc", 4.0f);
+        controller.config().setFloat("Gesture.Circle.MinRadius", 45.0f);
+        controller.config().setFloat("Gesture.Circle.MinArc", 4.5f);
         controller.config().setFloat("Gesture.KeyTap.MinDownVelocity", 70.0f);
         controller.config().setFloat("Gesture.KeyTap.HistorySeconds", .6f);
         controller.config().setFloat("Gesture.KeyTap.MinDistance", 11.0f);
@@ -90,81 +96,124 @@ class LeapMotionListener extends Listener {
     public void onFrame(Controller controller) {
         Frame frame = controller.frame();
         if (!frame.hands().isEmpty()) {
-            handVisible.set(true);
+            
             Screen screen = controller.locatedScreens().get(0);
             if (screen != null && screen.isValid()) {
                 keyTapMiddleFinger.set(false);
 
-                Hand hand = frame.hands().get(0);
-                if (hand.isValid()) {
+                for (Hand hand : frame.hands()) {
+                    if (hand.isValid()) {
+                        if (hand.isLeft()) {
 
-                    //credits to José Pereda (http://jperedadnr.blogspot.de/) 
-                    pitchLeftAverage.add(new Double(hand.direction().pitch()));
-                    rollLeftAverage.add(new Double(hand.palmNormal().roll()));
-                    yawLeftAverage.add(new Double(hand.direction().yaw()));
-                    pitchLeft.set(dAverage(pitchLeftAverage));
-                    rollLeft.set(dAverage(rollLeftAverage));
-                    yawLeft.set(dAverage(yawLeftAverage));
+                            leftHandConfidence.set(hand.confidence());
+                            leftHandVisible.set(true);
+                            //credits to José Pereda (http://jperedadnr.blogspot.de/) 
+                            pitchLeftAverage.add(new Double(hand.direction().pitch()));
+                            rollLeftAverage.add(new Double(hand.palmNormal().roll()));
+                            yawLeftAverage.add(new Double(hand.direction().yaw()));
+                            pitchLeft.set(dAverage(pitchLeftAverage));
+                            rollLeft.set(dAverage(rollLeftAverage));
+                            yawLeft.set(dAverage(yawLeftAverage));
 
-                    //enable rotation of the object by using the left hand
-                    if (hand.grabStrength() < 0.85f && hand.isLeft()) {
-                        Vector intersect = screen.intersect(hand.palmPosition(), hand.direction(), true);
-                        posLeftAverage.add(intersect);
-                        Vector avIntersect = Average(posLeftAverage);
-                        posHandLeft.setValue(new Point3D(screen.widthPixels() * Math.min(1.0, Math.max(0.0, avIntersect.getX())),
-                                screen.heightPixels() * Math.min(1.0, Math.max(0d, (1.0 - avIntersect.getY()))),
-                                hand.palmPosition().getZ()));
-                    }
-
-                    for (Gesture g : frame.gestures()) {
-                        //detect keytap gesture with the right hand
-                        if (g.type() == Gesture.Type.TYPE_KEY_TAP && hand.isRight()) {
-                            KeyTapGesture keyTap = new KeyTapGesture(g);
-                            Finger finger = new Finger(keyTap.pointable());
-                            if (finger.type() == Finger.Type.TYPE_MIDDLE) {
-                                keyTapMiddleFinger.set(true);
+                            //enable rotation of the object by using the left hand
+                            if (hand.grabStrength() < 0.85f && hand.isLeft()) {
+                                Vector intersect = screen.intersect(hand.palmPosition(), hand.direction(), true);
+                                posLeftAverage.add(intersect);
+                                Vector avIntersect = Average(posLeftAverage);
+                                posHandLeft.setValue(new Point3D(screen.widthPixels() * Math.min(1.0, Math.max(0.0, avIntersect.getX())),
+                                        screen.heightPixels() * Math.min(1.0, Math.max(0d, (1.0 - avIntersect.getY()))),
+                                        hand.palmPosition().getZ()));
+                            }
+                            
+                            if (frame.hands().count() == 1) { //if the left hand is the only one on the view
+                                rightHandVisible.set(false);
                             }
                         }
 
-                        //detect circle gesture with the right hand
-                        if (g.type() == Gesture.Type.TYPE_CIRCLE && hand.isRight()) {
-                            CircleGesture circleG = new CircleGesture(g);
-                            Finger finger = new Finger(circleG.pointable());
-                            if (finger.type() == Finger.Type.TYPE_INDEX) {
-                                Point3D p = new Point3D(circleG.normal().getX(),
-                                        circleG.normal().getY(),
-                                        -circleG.normal().getZ());
-                                //negative z to transform it into the javafx coordinate system
-                                circleGestureVector.set(p);
+                        if (hand.isRight()) {
+                            rightHandConfidence.set(hand.confidence());
+                            rightHandVisible.set(true);
+                            for (Gesture g : frame.gestures()) {
+                                //detect keytap gesture with the right hand
+                                if (g.type() == Gesture.Type.TYPE_KEY_TAP && hand.isRight()) {
+                                    KeyTapGesture keyTap = new KeyTapGesture(g);
+                                    Finger finger = new Finger(keyTap.pointable());
+                                    if (finger.type() == Finger.Type.TYPE_MIDDLE) {
+                                        keyTapMiddleFinger.set(true);
+                                    }
+                                }
+
+                                //detect circle gesture with the right hand
+                                if (g.type() == Gesture.Type.TYPE_CIRCLE && hand.isRight()) {
+                                    CircleGesture circleG = new CircleGesture(g);
+                                    Finger finger = new Finger(circleG.pointable());
+                                    if (finger.type() == Finger.Type.TYPE_INDEX) {
+                                        Point3D p = new Point3D(circleG.normal().getX(),
+                                                circleG.normal().getY(),
+                                                -circleG.normal().getZ());
+                                        //negative z to transform it into the javafx coordinate system
+                                        circleGestureVector.set(p);
+                                    }
+                                }
                             }
+                            if (frame.hands().count() == 1) {
+                                leftHandVisible.set(false);
+                            }
+                            
                         }
-                    }
 
                     //get the bones of the fingers to show them in the javafx thread
                     fingerChanged.set(false);
-                    bones.clear();
-                    for (Finger finger : frame.fingers()) {
+                    rightFingerChanged.set(false);
+                    leftHandBones.clear();
+                    rightHandBones.clear();
+                        
+                    
+                    for (Finger finger : hand.fingers()) {
                         if (finger.isValid()) {
                             for (Bone.Type b : Bone.Type.values()) {
-                                if (!b.equals(Bone.Type.TYPE_METACARPAL)) { // only save the fingers
-                                    bones.add(finger.bone(b));
+                                    if (!b.equals(Bone.Type.TYPE_METACARPAL) && hand.isLeft()) { // only save the fingers
+                                    leftHandBones.add(finger.bone(b));
+                                   
+                                }
+                                
+                                    if (!b.equals(Bone.Type.TYPE_METACARPAL) && hand.isRight()) {
+                                    rightHandBones.add(finger.bone(b));
+                                   
                                 }
                             }
                         }
                     }
-                    fingerChanged.set(!bones.isEmpty());
+                    
+                    fingerChanged.set(!leftHandBones.isEmpty());
+                    rightFingerChanged.set(!rightHandBones.isEmpty());
 
-                    Vector palmPosition = hand.palmPosition();
-                    pos.setX(palmPosition.getX());
-                    pos.setY(palmPosition.getY());
-                    pos.setZ(palmPosition.getZ());
-
-                    palmZcoordinates.set(pos.getZ());
+                        if (hand.isLeft()) {
+                            Vector palmPosition = hand.palmPosition();
+                            pos.setX(palmPosition.getX());
+                            pos.setY(palmPosition.getY());
+                            pos.setZ(palmPosition.getZ());
+                            
+                            palmZcoordinates.set(pos.getZ());
+                        }
+                        if (hand.isRight()) {
+                            Vector palmPosition = hand.palmPosition();
+                            pos.setX(palmPosition.getX());
+                            pos.setY(palmPosition.getY());
+                            pos.setZ(palmPosition.getZ());
+                            
+                            rightPalmZcoordinates.set(pos.getZ());
+                            
+                        }
+                        
                 }
             }
-        } else {
-            handVisible.set(false);
+        } 
+                }else {
+            leftHandVisible.set(false);
+            rightHandVisible.set(false);
         }
+
     }
 
     @Override
@@ -173,7 +222,7 @@ class LeapMotionListener extends Listener {
     }
     
     public void clearInfo(){
-        this.bones.clear();
+        this.leftHandBones.clear();
         this.pitchLeftAverage.clear();
         this.posLeftAverage.clear();
         this.positionAverage.clear();
@@ -182,17 +231,30 @@ class LeapMotionListener extends Listener {
         
     }
     
-    public ArrayList<Bone> getBones(){ 
+    public ArrayList<Bone> getLeftBones(){ 
         // Returns a fresh copy of the bones collection 
         // to avoid concurrent exceptions iterating this list
-        return (ArrayList<Bone>) bones.clone();
+        return (ArrayList<Bone>) leftHandBones.clone();
     }
     
-    public BooleanProperty fingerChangedProperty() { 
+    public ArrayList<Bone> getRightBones(){
+        return (ArrayList<Bone>) rightHandBones.clone();
+    }
+    
+    public BooleanProperty leftFingerChangedProperty() { 
         return fingerChanged; 
     }
-    public BooleanProperty handVisibleProperty(){
-        return handVisible;
+    
+    public BooleanProperty rightFingerChangedProperty() { 
+        return rightFingerChanged; 
+    }
+    
+    public BooleanProperty leftHandVisibleProperty(){
+        return leftHandVisible;
+    }
+    
+    public BooleanProperty rightHandVisibleProperty(){
+        return rightHandVisible;
     }
     
     private Vector Average(LimitQueue<Vector> vectors)
@@ -246,12 +308,23 @@ class LeapMotionListener extends Listener {
         return palmZcoordinates;
     }
     
+    public DoubleProperty rightPalmZcoordinateProperty(){
+        return rightPalmZcoordinates;
+    }
+    
     public BooleanProperty keyTapMiddleFingerProperty(){
         return keyTapMiddleFinger;
     }
     
     public ObservableValue<Point3D> circleGestureVectorProperty(){
         return circleGestureVector;
+    }
+    
+    public DoubleProperty leftHandConfidenceProperty(){
+        return leftHandConfidence;
+    }
+    public DoubleProperty rightHandConfidenceProperty(){
+        return rightHandConfidence;
     }
     
 }

@@ -115,14 +115,23 @@ public class Main extends Application{
     private double mouseDeltaX;
     private double mouseDeltaY;
     
+    private boolean leftHandJustEntered = true;
+    private boolean rightHandJustEntered = true;
+    
+    private long leftHandJustEnteredAtFrameID;
+    private long rightHandJustEnteredAtFrameID;
+    
     LeapMotionListener listener ;
     Controller controller;
     Group handGroup = new Group();
+    Group leftHandGroup = new Group();
+    Group rightHandGroup = new Group();
     PhongMaterial handSphereMat = new PhongMaterial(Color.RED);
     Random rand = new Random(System.currentTimeMillis());
     Group rGroup = new Group();
     double palmZ ;
-    UGXReader ugxReader;
+    Circle r = new Circle();
+
     com.sun.glass.ui.Robot wall_e = com.sun.glass.ui.Application.GetApplication().createRobot();
     long lastTap;
     RotateTransition rotateAnimation = new RotateTransition();
@@ -196,7 +205,9 @@ public class Main extends Application{
             for (int i = 0; i < cArray.length; i++) { //initialize the cylinder array for the hand bones
                 cArray[i] = new Cylinder(1, 1, 20); //using a fixed size array for the hand bones avoids memory issues
                 cArray[i].setMouseTransparent(true); //but limits the max. amount of hands that can be registered at the same time
-            }                                       //set it mouse transparent, so that it wont block the mouse click events by the robot
+            //set it mouse transparent, so that it wont block the mouse click events by the robot
+                cArray[i].setMaterial(handSphereMat);
+            }                                       
             
         } catch (Exception e) {
             e.printStackTrace(System.out);
@@ -262,13 +273,20 @@ public class Main extends Application{
             fileChooser.setInitialDirectory(new File(getClass().getResource("../../..").getFile()));
         }
 
-        FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("UGX files (*.ugx)", "*.ugx");
-        fileChooser.getExtensionFilters().add(extFilter);
+        FileChooser.ExtensionFilter extFilterUGX = new FileChooser.ExtensionFilter("UGX files (*.ugx)", "*.ugx");
+        FileChooser.ExtensionFilter extFilterSTL = new FileChooser.ExtensionFilter("STL files (*.stl)", "*.stl");
+        fileChooser.getExtensionFilters().addAll(extFilterUGX,extFilterSTL);
         file = fileChooser.showOpenDialog(currentStage);
         
 
 
         String filePath = file.getAbsolutePath();
+        if (filePath.endsWith(".stl")) {
+            Group stl = buildSTL(filePath, Color.AQUA, false, true);
+            VFX3DUtil.addMouseBehavior(stl, stl, MouseButton.PRIMARY,
+                Rotate.X_AXIS, Rotate.Y_AXIS);
+            return stl;
+        }
         UGXReader ugxr = new UGXReader(filePath);
         ugxr.setFlagHighResolution(highResolution);
         ugxr.setFlagDoubleFacesOnEdges(true);
@@ -277,7 +295,6 @@ public class Main extends Application{
         ugxr.setFlagDebugMode(debugMode);
         ugxGeometry = ugxr.xbuildUGX();
         subsetNameArray = ugxr.getSubssetNameArray();
-        ugxReader = ugxr;
         root.getChildren().add(ugxGeometry);
         
         ugxSubsetCount = ugxr.getNumberOfSubsets();
@@ -716,7 +733,7 @@ public class Main extends Application{
     private void addGeometryToScene(boolean replaceOldScene){
         
         if (replaceOldScene) {
-            for (int i = (ultraRoot.getChildren().size()-1); i > 1 ; i--) { //remove every node exept the light 
+            for (int i = (ultraRoot.getChildren().size()-1); i > 1 ; i--) { //remove every node except the light 
                     ultraRoot.getChildren().remove(i);
                 }
                 mouseBehaviorList.clear();
@@ -747,160 +764,246 @@ public class Main extends Application{
     }
     
 
-    /**Adds the hand model to the scene and updates it with the most recent information on the hand location.
+    /**
+     * Adds the hand model to the scene and updates it with the most recent
+     * information on the hand location.
      */
-    private void addGlobalLeapMotionPropertyListener(){
-        
+    private void addGlobalLeapMotionPropertyListener() {
+
         //listen to changed positions of the hand and add the model to the view
-                listener.fingerChangedProperty().addListener((ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) -> {
-                if (newValue) {
-                    
-                    ArrayList<Bone> bones = listener.getBones();
-                    
-                    Platform.runLater(() -> { //javaFX thread
+        listener.leftFingerChangedProperty().addListener((ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) -> {
+            
+            
+            if (newValue) {
 
-                        handGroup.getChildren().clear();
-                        
-                        int i = 0;
-                        for (Bone b : bones) {
-                            
-                            {
-                                final Vector p = b.center();
+                ArrayList<Bone> leftHandBones = listener.getLeftBones();
+
+                Platform.runLater(() -> { //javaFX thread
+
+                    handGroup.getChildren().remove(leftHandGroup);
+                    leftHandGroup.getChildren().clear();
+                    int i = 0;
+
+                    for (Bone b : leftHandBones) {
+
+                        {
+                            final Vector p = b.center();
                                 // create bone as a vertical cylinder and locate it at its center position
-                                
-                                cArray[i].setRadius(b.width()/4); // use the cylinder in the cArray, DO NOT create new cylinders every frame as it would
-                                cArray[i].setHeight(b.length()); // lead to memory issues
-                                cArray[i].getTransforms().clear(); // remove all previous transforms
-                                
-                                cArray[i].setMaterial(handSphereMat);
 
-                                // translate and rotate the cylinder towards its direction
-                                {
-                                    final Vector v2 = b.direction();
-                                    Vector vDirection = new Vector(v2.getX(), -v2.getY(), -v2.getZ());
-                                    Vector cross2 = vDirection.cross(yNegVector);
-                                    double ang2 = vDirection.angleTo(yNegVector);
-                                    Translate translateToMiddle = new Translate(p.getX(), -p.getY() + 200, -p.getZ());
-                                    Point3D crossProd = new Point3D(cross2.getX(), -cross2.getY(), cross2.getZ()); 
-                                    Rotate rotateToConnectFingers = new Rotate(-Math.toDegrees(ang2), 0, 0, 0, crossProd);
-                                    cArray[i].getTransforms().addAll(translateToMiddle,rotateToConnectFingers);
-                                }
-                                cArray[i].setScaleX(0.1);
-                                cArray[i].setScaleY(0.1);
-                                cArray[i].setScaleZ(0.1);
+                            cArray[i].setRadius(b.width() / 4); // use the cylinder in the cArray, DO NOT create new cylinders every frame as it would
+                            cArray[i].setHeight(b.length()); // lead to memory issues
+                            cArray[i].getTransforms().clear(); // remove all previous transforms
 
-                                handGroup.getChildren().addAll(cArray[i]);
-                                i++;
+                            cArray[i].setMaterial(handSphereMat);
+
+                            // translate and rotate the cylinder towards its direction
+                            {
+                                final Vector v2 = b.direction();
+                                Vector vDirection = new Vector(v2.getX(), -v2.getY(), -v2.getZ());
+                                Vector cross2 = vDirection.cross(yNegVector);
+                                double ang2 = vDirection.angleTo(yNegVector);
+                                Translate translateToMiddle = new Translate(p.getX(), -p.getY() + 200, -p.getZ());
+                                Point3D crossProd = new Point3D(cross2.getX(), -cross2.getY(), cross2.getZ());
+                                Rotate rotateToConnectFingers = new Rotate(-Math.toDegrees(ang2), 0, 0, 0, crossProd);
+                                cArray[i].getTransforms().addAll(translateToMiddle, rotateToConnectFingers);
                             }
-                        }
-                        if (!ultraRoot.getChildren().contains(handGroup)) {
-                            ultraRoot.getChildren().add(handGroup);
-                            if (debugMode) {
-                                System.out.println("Handgroup  " + handGroup.toString() + " entered the view.");
-                            }
-                        }
-                    });
-                }
-            });
+                            cArray[i].setScaleX(0.1);
+                            cArray[i].setScaleY(0.1);
+                            cArray[i].setScaleZ(0.1);
 
-            listener.handVisibleProperty().addListener((ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) -> {
-                //remove the hand model from the scene when there is no hand visible for the leap motion device
-                if (!newValue) {
-                    Platform.runLater(() -> {
+                            leftHandGroup.getChildren().addAll(cArray[i]);
+                            i++;
+                        }
+                    }
+
+                    handGroup.getChildren().addAll(leftHandGroup);
+                    if (!ultraRoot.getChildren().contains(handGroup)) {
+                        ultraRoot.getChildren().add(handGroup);
                         if (debugMode) {
-                            System.out.println("Hands out of view");
+                            System.out.println("Handgroup  " + leftHandGroup.toString() + " entered the view.");
                         }
+                    }
+                });
+            }
+        });
+
+        listener.rightFingerChangedProperty().addListener((ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) -> {
+            if (newValue) {
+
+                ArrayList<Bone> rightHandBones = listener.getRightBones();
+
+                Platform.runLater(() -> { //javaFX thread
+
+                    handGroup.getChildren().remove(rightHandGroup);
+                    rightHandGroup.getChildren().clear();
+
+                    int i = leftHandGroup.getChildren().size();
+                    for (Bone b : rightHandBones) {
+
+                        {
+                            final Vector p = b.center();
+                            // create bone as a vertical cylinder and locate it at its center position
+                            cArray[i].setRadius(b.width() / 4); // use the cylinder in the cArray, DO NOT create new cylinders every frame as it would
+                            cArray[i].setHeight(b.length()); // lead to memory issues
+                            cArray[i].getTransforms().clear(); // remove all previous transforms
+
+                            if (i % 15 == 5) {
+                                cArray[i].setMaterial(handSphereMat);
+                            }
+
+                            // translate and rotate the cylinder towards its direction
+                            {
+                                final Vector v2 = b.direction();
+                                Vector vDirection = new Vector(v2.getX(), -v2.getY(), -v2.getZ());
+                                Vector cross2 = vDirection.cross(yNegVector);
+                                double ang2 = vDirection.angleTo(yNegVector);
+                                Translate translateToMiddle = new Translate(p.getX(), -p.getY() + 200, -p.getZ());
+                                Point3D crossProd = new Point3D(cross2.getX(), -cross2.getY(), cross2.getZ());
+                                Rotate rotateToConnectFingers = new Rotate(-Math.toDegrees(ang2), 0, 0, 0, crossProd);
+                                cArray[i].getTransforms().addAll(translateToMiddle, rotateToConnectFingers);
+                            }
+                            cArray[i].setScaleX(0.1);
+                            cArray[i].setScaleY(0.1);
+                            cArray[i].setScaleZ(0.1);
+
+                            rightHandGroup.getChildren().addAll(cArray[i]);
+                            //handGroup.getChildren().addAll(cArray[i]);
+                            i++;
+                        }
+                    }
+
+                    handGroup.getChildren().addAll(rightHandGroup);
+                    if (!ultraRoot.getChildren().contains(handGroup)) {
+                        ultraRoot.getChildren().add(handGroup);
+                        if (debugMode) {
+                            System.out.println("Handgroup  " + rightHandGroup.toString() + " entered the view.");
+                        }
+                    }
+                });
+            }
+        });
+
+        listener.leftHandVisibleProperty().addListener((ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) -> {
+            //remove the model of the left hand from the scene, when there is no left hand visible for the device
+            if (!newValue) {
+                Platform.runLater(() -> {
+                    if (debugMode) {
+                        System.out.println("Left hand out of view");
+                    }
+                    handGroup.getChildren().remove(leftHandGroup);
+                    if (!handGroup.getChildren().contains(rightHandGroup)) { //if both hands are out, remove the node from the root node
                         ultraRoot.getChildren().remove(handGroup);
-                        handGroup.getChildren().clear();
                         handSphereMat.setDiffuseColor(new Color(rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), 1));
-                        listener.clearInfo();
-                    });
-                }
-            });
-        
-        
-        
+                    }
+                    listener.clearInfo();
+                    r.setOpacity(0);
+                });
+            }
+        });
+
+        listener.rightHandVisibleProperty().addListener((ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) -> {
+            //remove the model of the right hand from the scene, when there is no right hand visible for the device
+            if (!newValue) {
+                Platform.runLater(() -> {
+                    if (debugMode) {
+                        System.out.println("Right hand out of view");
+                    }
+                    handGroup.getChildren().remove(rightHandGroup);
+                    if (!handGroup.getChildren().contains(leftHandGroup)) { //if both hands are out, remove the node from the root node
+                        ultraRoot.getChildren().remove(handGroup);
+                        handSphereMat.setDiffuseColor(new Color(rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), 1));
+                    }
+                    listener.clearInfo();
+                    r.setOpacity(0);
+                });
+            }
+        });
     }
-    
-    /** Adds predefined property listeners to the leap motion listener, attached to node n.
-     * 
+
+    /**
+     * Adds predefined property listeners to the leap motion listener, attached
+     * to node n.
+     *
      * @param n the node that should be affected by the leap motion gestures
      */
-    private void addNodeLeapMotionPropertyListener(Node n){
-        
+    private void addNodeLeapMotionPropertyListener(Node m) {
+
         listener.posHandLeftProperty().addListener((ObservableValue<? extends Point3D> ov, Point3D t, final Point3D t1) -> {
-                    Platform.runLater(() -> {
-                        if(t1!=null){
-                            double roll=listener.rollLeftProperty().get();
-                            double pitch=-listener.pitchLeftProperty().get();
-                            double yaw=-listener.yawLeftProperty().get();
-                            matrixRotateNode(n,roll/2,pitch/2,yaw/2);
-                        }
-                    });
+            Platform.runLater(() -> {
+                palmZ = listener.palmZcoordinatePropery().get();
+                if (t1 != null) {
+                    double roll = listener.rollLeftProperty().get();
+                    double pitch = -listener.pitchLeftProperty().get();
+                    double yaw = -listener.yawLeftProperty().get();
+                    matrixRotateNode(m, roll / 2, pitch / 2, yaw / 2);
+                }
             });
+        });
 
-        listener.palmZcoordinatePropery().addListener((ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
-
-            palmZ = (double) newValue;
+        listener.rightPalmZcoordinateProperty().addListener((ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
 
             Platform.runLater(() -> {
 
-                int index = ultraRoot.getChildren().indexOf(handGroup);
-                Group tempHandGroup = (Group) ultraRoot.getChildren().get(index);
-                rGroup.getChildren().clear();
-
-                for (Node cylinderNode : tempHandGroup.getChildren()) {
-
-                    if (tempHandGroup.getChildren().indexOf(cylinderNode) % 15 == 5) { //only detect the cylinder that represents the tip of the index finger
-                        Bounds b = cylinderNode.localToScreen(cylinderNode.getBoundsInLocal());
-                        if (b.intersects(n.localToScreen(n.getBoundsInLocal()))) {
-
-                            Circle r = new Circle((cylinderNode.getBoundsInParent().getMinX() + cylinderNode.getBoundsInParent().getMaxX() + 1) / 2,
-                                    (cylinderNode.getBoundsInParent().getMinY() + cylinderNode.getBoundsInParent().getMaxY() - 1) / 2,
-                                    (cylinderNode.getBoundsInParent().getHeight() + cylinderNode.getBoundsInParent().getWidth()) / 4, Color.RED);
-
-                            r.setFill(Color.RED);
-                            ((Cylinder) cylinderNode).setMaterial(new PhongMaterial(Color.WHITESMOKE));
+                int index = handGroup.getChildren().indexOf(rightHandGroup);
+                if (index != -1) {
+                    Group tempHandGroup = (Group) handGroup.getChildren().get(index);
+                    rGroup.getChildren().clear();
+                    for (Node n : renderedUGXGeometries) {
+                        
+                        for (Node cylinderNode : tempHandGroup.getChildren()) {
                             
-                            r.setOpacity(0.75);
-                            rGroup.getChildren().add(r);
-                            //FXRobot wall_e = new BaseFXRobot(scene) ;
-                            Point2D screenCoordinates = cylinderNode.localToScreen(new Point2D(cylinderNode.getTranslateX(), cylinderNode.getTranslateY()));
-                            wall_e.mouseMove((int) screenCoordinates.getX(), (int) screenCoordinates.getY());
-                            if (listener.keyTapMiddleFingerProperty().get() && controller.frame().id() - lastTap > 20) {
+                            if (tempHandGroup.getChildren().indexOf(cylinderNode) % 15 == 5) { //only detect the cylinder that represents the tip of the index finger
+                                Bounds b = cylinderNode.localToScreen(cylinderNode.getBoundsInLocal());
+                                if (b.intersects(n.localToScreen(n.getBoundsInLocal()))) {
+                                    
+                                    r = new Circle((cylinderNode.getBoundsInParent().getMinX() + cylinderNode.getBoundsInParent().getMaxX() + 1) / 2,
+                                            (cylinderNode.getBoundsInParent().getMinY() + cylinderNode.getBoundsInParent().getMaxY() - 1) / 2,
+                                            (cylinderNode.getBoundsInParent().getHeight() + cylinderNode.getBoundsInParent().getWidth()) / 4, Color.RED);
+                                    
+                                    ((Cylinder) cylinderNode).setMaterial(new PhongMaterial(Color.WHITESMOKE));
+                                    
+                                    r.setOpacity(0.75);
+                                    rGroup.getChildren().add(r);
+                                    //FXRobot wall_e = new BaseFXRobot(scene) ;
+                                    Point2D screenCoordinates = cylinderNode.localToScreen(new Point2D(cylinderNode.getTranslateX(), cylinderNode.getTranslateY()));
+                                    wall_e.mouseMove((int) screenCoordinates.getX(), (int) screenCoordinates.getY());
+                                    if (listener.keyTapMiddleFingerProperty().get() && controller.frame().id() - lastTap > 20) {
+                                        
+                                        if (debugMode) {
+                                            System.out.println("Clicked screen coordinates " + screenCoordinates.toString());
+                                        }
+                                        wall_e.mousePress(2); //press right mouse button
 
-                                if (debugMode) {
-                                    System.out.println("Clicked screen coordinates " + screenCoordinates.toString());
+                                        wall_e.mouseRelease(2); //release right mouse button
+                                        lastTap = controller.frame().id();
+                                    }
                                 }
-
-                           // TODO DISABLE THE HIGHLIGHT OF THE INDEX FINGER WITH THE LEFT HAND
-                                wall_e.mousePress(2); //press right mouse button
-
-                                wall_e.mouseRelease(2); //release right mouse button
-                                lastTap = controller.frame().id();
                             }
                         }
+                        if (!ultraRoot.getChildren().contains(rGroup)) {
+                            ultraRoot.getChildren().add(rGroup);
+                        }
                     }
-                }
-                if (!ultraRoot.getChildren().contains(rGroup)) {
-                    ultraRoot.getChildren().add(rGroup);
                 }
             });
         });
 
         listener.circleGestureVectorProperty().addListener((ObservableValue<? extends Point3D> observable, Point3D oldValue, Point3D newValue) -> {
             Platform.runLater(() -> {
+
                 if (newValue.getX() != oldValue.getX() && rotateAnimation.getStatus() == Animation.Status.STOPPED
                         && controller.frame().id() - lastTap > 70) { //minimum of 70 frames before it will accept new circle gestures
-                    
-                    rotateAnimation.setNode(n);
-                    rotateAnimation.setAxis(newValue);
-                    rotateAnimation.setDuration(Duration.seconds(3));
-                    rotateAnimation.setByAngle(360);
-                    
-                    rotateAnimation.play();
-                    lastTap = controller.frame().id();
-                    
+
+                    for (Node geometry : renderedUGXGeometries) {
+                        rotateAnimation.setNode(geometry);
+                        rotateAnimation.setAxis(newValue);
+                        rotateAnimation.setDuration(Duration.seconds(6));
+                        rotateAnimation.setByAngle(360);
+
+                        rotateAnimation.play();
+                        lastTap = controller.frame().id();
+                    }
+
                 } else if (newValue.getX() != oldValue.getX() && rotateAnimation.getStatus() == Animation.Status.RUNNING
                         && controller.frame().id() - lastTap > 70) { //stop animation if another circle gesture is detected during the runtime
                     rotateAnimation.stop();
