@@ -70,8 +70,8 @@ class LeapMotionListener extends Listener {
 //        controller.enableGesture(Gesture.Type.TYPE_SCREEN_TAP);
         controller.enableGesture(Gesture.Type.TYPE_KEY_TAP);
         circleGestureVector.set(Point3D.ZERO);
-        controller.config().setFloat("Gesture.Circle.MinRadius", 45.0f);
-        controller.config().setFloat("Gesture.Circle.MinArc", 4.5f);
+        controller.config().setFloat("Gesture.Circle.MinRadius", 40.0f);
+        controller.config().setFloat("Gesture.Circle.MinArc", 4.0f);
         controller.config().setFloat("Gesture.KeyTap.MinDownVelocity", 70.0f);
         controller.config().setFloat("Gesture.KeyTap.HistorySeconds", .6f);
         controller.config().setFloat("Gesture.KeyTap.MinDistance", 11.0f);

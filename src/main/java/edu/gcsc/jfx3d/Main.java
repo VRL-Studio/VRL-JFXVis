@@ -121,6 +121,8 @@ public class Main extends Application{
     private long leftHandJustEnteredAtFrameID;
     private long rightHandJustEnteredAtFrameID;
     
+    private long handEnteredViedDelayFrame;
+    
     LeapMotionListener listener ;
     Controller controller;
     Group handGroup = new Group();
@@ -820,7 +822,7 @@ public class Main extends Application{
                     if (!ultraRoot.getChildren().contains(handGroup)) {
                         ultraRoot.getChildren().add(handGroup);
                         if (debugMode) {
-                            System.out.println("Handgroup  " + leftHandGroup.toString() + " entered the view.");
+                            System.out.println("Left hand  " + leftHandGroup.toString() + " entered the view.");
                         }
                     }
                 });
@@ -876,7 +878,7 @@ public class Main extends Application{
                     if (!ultraRoot.getChildren().contains(handGroup)) {
                         ultraRoot.getChildren().add(handGroup);
                         if (debugMode) {
-                            System.out.println("Handgroup  " + rightHandGroup.toString() + " entered the view.");
+                            System.out.println("Right hand  " + rightHandGroup.toString() + " entered the view.");
                         }
                     }
                 });
@@ -896,6 +898,7 @@ public class Main extends Application{
                         handSphereMat.setDiffuseColor(new Color(rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), 1));
                     }
                     listener.clearInfo();
+                    leftHandJustEntered = true;
                     r.setOpacity(0);
                 });
             }
@@ -912,6 +915,7 @@ public class Main extends Application{
                     if (!handGroup.getChildren().contains(leftHandGroup)) { //if both hands are out, remove the node from the root node
                         ultraRoot.getChildren().remove(handGroup);
                         handSphereMat.setDiffuseColor(new Color(rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), 1));
+                        leftHandJustEntered = true;
                     }
                     listener.clearInfo();
                     r.setOpacity(0);
@@ -928,18 +932,27 @@ public class Main extends Application{
      */
     private void addNodeLeapMotionPropertyListener(Node m) {
 
-        listener.posHandLeftProperty().addListener((ObservableValue<? extends Point3D> ov, Point3D t, final Point3D t1) -> {
-            Platform.runLater(() -> {
-                palmZ = listener.palmZcoordinatePropery().get();
-                if (t1 != null) {
-                    double roll = listener.rollLeftProperty().get();
-                    double pitch = -listener.pitchLeftProperty().get();
-                    double yaw = -listener.yawLeftProperty().get();
-                    matrixRotateNode(m, roll / 2, pitch / 2, yaw / 2);
-                }
-            });
-        });
+            listener.posHandLeftProperty().addListener((ObservableValue<? extends Point3D> ov, Point3D t, final Point3D t1) -> {
+                Platform.runLater(() -> {
+                    
+                    if (handGroup.getChildren().contains(leftHandGroup) && leftHandJustEntered && listener.leftHandConfidenceProperty().get()> 0.70) {
+                        leftHandJustEntered = false;
+                        leftHandJustEnteredAtFrameID = controller.frame().id();
+                    }
 
+                    if (controller.frame().id() - leftHandJustEnteredAtFrameID > 20 && !leftHandJustEntered) {
+
+                        palmZ = listener.palmZcoordinatePropery().get();
+                        if (t1 != null) {
+                            double roll = listener.rollLeftProperty().get();
+                            double pitch = -listener.pitchLeftProperty().get();
+                            double yaw = -listener.yawLeftProperty().get();
+                            matrixRotateNode(m, roll / 2, pitch / 2, yaw / 2);
+                        }
+                    }
+                });
+            });
+            
         listener.rightPalmZcoordinateProperty().addListener((ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
 
             Platform.runLater(() -> {
