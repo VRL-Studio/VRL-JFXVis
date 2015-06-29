@@ -38,7 +38,9 @@ Navigate to the [Gradle](http://www.gradle.org/) project (e.g., `path/to/VRL-JFX
 
 - Select the underlying geometry part with the right mouse button
 
-- Hold down the alt button while right clicking to select multiple parts
+- Drag the geometry around the screen by clicking and holding down the right mouse button
+
+- Hold down the ctrl button while right clicking to select multiple parts
 
 - Cycle through subsets : +
 
@@ -48,7 +50,7 @@ Navigate to the [Gradle](http://www.gradle.org/) project (e.g., `path/to/VRL-JFX
 
 #### Leap Motion controls
 
-## Left Hand 
+#### Left Hand 
 
 - Rotates the geometry, based on the position of the left hand.
 
@@ -56,7 +58,7 @@ Navigate to the [Gradle](http://www.gradle.org/) project (e.g., `path/to/VRL-JFX
 
 - Close the left hand to stop the rotation of the geometry. Open the hand again to resume it.
 
-## Right Hand
+#### Right Hand
 
 - Enables selection and rotation of the geometry by using gestures
 
