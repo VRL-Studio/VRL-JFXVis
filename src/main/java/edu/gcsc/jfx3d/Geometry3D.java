@@ -6,7 +6,8 @@
 package edu.gcsc.jfx3d;
 
 /**
- *
+ *Abstract class for all 3D geometries.
+ * Derive from this class if you want to add new 3D geometry parts.
  * @author Eugen
  */
 public abstract class Geometry3D {

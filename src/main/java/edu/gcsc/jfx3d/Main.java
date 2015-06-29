@@ -234,35 +234,6 @@ public class Main extends Application{
         Group root = new Group();
 
         
-        
-
-/*
-        Group d10 = buildSTL("../JFX3DSample-master/src/main/java/edu/gcsc/jfx3d/STL/hexamail.stl", Color.AQUA, false, true);
-        Group d10bin = buildSTL("../JFX3DSample-master/src/main/java/edu/gcsc/jfx3d/STL/d10bin.stl", Color.AQUA, false, true);
-        Group porsche = buildSTL("../JFX3DSample-master/src/main/java/edu/gcsc/jfx3d/STL/porsche.stl", Color.AQUA, false, true);
-        Group tire = buildSTL("../JFX3DSample-master/src/main/java/edu/gcsc/jfx3d/STL/tire_v.stl", Color.AQUA, false, true);
-        d10.setTranslateX(-50);
-        VFX3DUtil.addMouseBehavior(d10, d10, MouseButton.PRIMARY,
-                Rotate.X_AXIS, Rotate.Y_AXIS);
-        
-        VFX3DUtil.addMouseBehavior(d10bin, d10bin, MouseButton.PRIMARY,
-                Rotate.X_AXIS, Rotate.Y_AXIS);
-        
-        VFX3DUtil.addMouseBehavior(porsche, porsche, MouseButton.PRIMARY,
-                Rotate.X_AXIS, Rotate.Y_AXIS);
-        
-        
-        VFX3DUtil.addMouseBehavior(tire, tire, MouseButton.PRIMARY,
-                Rotate.X_AXIS, Rotate.Y_AXIS);
-        
-        root.getChildren().add(porsche);
-        root.getChildren().add(d10);
-        root.getChildren().add(d10bin);
-        root.getChildren().add(tire);
-        */
-        
-
-        
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Open Geometry File");
         
@@ -304,6 +275,11 @@ public class Main extends Application{
         return enableNewFocusPoint(dragDrop(root,renderedUGXGeometries.size()),renderedUGXGeometries.size());
     }
     
+    /**Handles keyboard input on a specified scene.
+     * 
+     * @param scene the scene, that should be affected by the input
+     * @param camera the camera, that should be affected by the input
+     */
     private void handleKeyboard(Scene scene,PerspectiveCamera camera){
         scene.setOnKeyPressed(event -> {
             double change = cameraQuantity;
@@ -408,6 +384,12 @@ public class Main extends Application{
         });
     }
 
+    /**
+     * Early implementation of a mouse handler. Needs to be tweaked to work correctly.
+     * Might be worked on later.
+     * @param scene the scene that recieves the changes
+     * @param camera the camera that will be affected by the rotations
+     */
     private void handleMouse(Scene scene,PerspectiveCamera camera){
         
         Rotate xRotate = new Rotate(0, 0, 0, 0, Rotate.X_AXIS);
@@ -442,6 +424,14 @@ public class Main extends Application{
     }
     
 
+    /**Creates a visualization of a .stl file.
+     * 
+     * @param filePath the absolute file path of the .stl file
+     * @param color the color the visualized file should have
+     * @param ambient enables ambient light on the geometry
+     * @param fill renders the faces or just shows the lines
+     * @return the visualized STL file as a group node
+     */
     private Group buildSTL (String filePath,Color color, boolean ambient, boolean fill){
         
         STLReader reader = new STLReader(filePath);
@@ -490,7 +480,7 @@ public class Main extends Application{
     
     
     /**Creates a MenuBar filled with several sub menus and returns them as a VBox
-     * 
+     * @return the VBox that contains all gui elements
     **/
     private VBox addGuiElements(){
         
@@ -895,6 +885,8 @@ public class Main extends Application{
                     handGroup.getChildren().remove(leftHandGroup);
                     if (!handGroup.getChildren().contains(rightHandGroup)) { //if both hands are out, remove the node from the root node
                         ultraRoot.getChildren().remove(handGroup);
+                        
+                        //set a new color to the hand material, so the next time a hand enters the view it will have a different color
                         handSphereMat.setDiffuseColor(new Color(rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), 1));
                     }
                     listener.clearInfo();
@@ -914,6 +906,8 @@ public class Main extends Application{
                     handGroup.getChildren().remove(rightHandGroup);
                     if (!handGroup.getChildren().contains(leftHandGroup)) { //if both hands are out, remove the node from the root node
                         ultraRoot.getChildren().remove(handGroup);
+                        
+                        //set a new color to the hand material, so the next time a hand enters the view it will have a different color
                         handSphereMat.setDiffuseColor(new Color(rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), 1));
                         leftHandJustEntered = true;
                     }
@@ -935,6 +929,7 @@ public class Main extends Application{
             listener.posHandLeftProperty().addListener((ObservableValue<? extends Point3D> ov, Point3D t, final Point3D t1) -> {
                 Platform.runLater(() -> {
                     
+                    //add a small delay to make sure the device will have the right information about the hand
                     if (handGroup.getChildren().contains(leftHandGroup) && leftHandJustEntered && listener.leftHandConfidenceProperty().get()> 0.70) {
                         leftHandJustEntered = false;
                         leftHandJustEnteredAtFrameID = controller.frame().id();
@@ -968,7 +963,7 @@ public class Main extends Application{
                             if (tempHandGroup.getChildren().indexOf(cylinderNode) % 15 == 5) { //only detect the cylinder that represents the tip of the index finger
                                 Bounds b = cylinderNode.localToScreen(cylinderNode.getBoundsInLocal());
                                 if (b.intersects(n.localToScreen(n.getBoundsInLocal()))) {
-                                    
+                                    //display a red circle around the tip of the index finger when it crossed a bounding box
                                     r = new Circle((cylinderNode.getBoundsInParent().getMinX() + cylinderNode.getBoundsInParent().getMaxX() + 1) / 2,
                                             (cylinderNode.getBoundsInParent().getMinY() + cylinderNode.getBoundsInParent().getMaxY() - 1) / 2,
                                             (cylinderNode.getBoundsInParent().getHeight() + cylinderNode.getBoundsInParent().getWidth()) / 4, Color.RED);
@@ -977,8 +972,11 @@ public class Main extends Application{
                                     
                                     r.setOpacity(0.75);
                                     rGroup.getChildren().add(r);
-                                    //FXRobot wall_e = new BaseFXRobot(scene) ;
+                                    
                                     Point2D screenCoordinates = cylinderNode.localToScreen(new Point2D(cylinderNode.getTranslateX(), cylinderNode.getTranslateY()));
+                                    
+                                    //simulate a mouse click 
+                                    //move mouse to the position of the tip of the right index finger
                                     wall_e.mouseMove((int) screenCoordinates.getX(), (int) screenCoordinates.getY());
                                     if (listener.keyTapMiddleFingerProperty().get() && controller.frame().id() - lastTap > 20) {
                                         
@@ -1004,6 +1002,7 @@ public class Main extends Application{
         listener.circleGestureVectorProperty().addListener((ObservableValue<? extends Point3D> observable, Point3D oldValue, Point3D newValue) -> {
             Platform.runLater(() -> {
 
+                //circle gesture logic of the right hand
                 if (newValue.getX() != oldValue.getX() && rotateAnimation.getStatus() == Animation.Status.STOPPED
                         && controller.frame().id() - lastTap > 70) { //minimum of 70 frames before it will accept new circle gestures
 

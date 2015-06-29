@@ -500,7 +500,6 @@ public class UGXReader {
                     edgesGroup.getChildren().addAll(edgesMeshView);
 
                     addLowResolutionInteraction(edgesMeshView);
-                    //addEdgeInteraction(edgesGroup);
                 }
 
             } // end of edge visualisation
@@ -568,7 +567,7 @@ public class UGXReader {
                         newFaceMap.put(mv2, geometry2DList.get(ssFaces[j]));
 
                     } else {
-
+                        
                         TriangleMesh mesh1 = new TriangleMesh();
 
                         mesh1.getPoints().addAll(globalVertexList.get(geometry2DList.get(ssFaces[j]).getNodes()[0] * 3),
@@ -664,7 +663,7 @@ public class UGXReader {
         }
         
         
-           // setting color for each each subset
+           // setting color for each subset
             for (int i = 0; i < ssNumber; i++) {
                 
                 Color ssColor = new Color(ugxfile.getSubset_handler().get(0).getSubsets().get(i).getColor()[0],

@@ -72,9 +72,9 @@ class LeapMotionListener extends Listener {
         circleGestureVector.set(Point3D.ZERO);
         controller.config().setFloat("Gesture.Circle.MinRadius", 40.0f);
         controller.config().setFloat("Gesture.Circle.MinArc", 4.0f);
-        controller.config().setFloat("Gesture.KeyTap.MinDownVelocity", 70.0f);
-        controller.config().setFloat("Gesture.KeyTap.HistorySeconds", .6f);
-        controller.config().setFloat("Gesture.KeyTap.MinDistance", 11.0f);
+        controller.config().setFloat("Gesture.KeyTap.MinDownVelocity", 50.0f);
+        controller.config().setFloat("Gesture.KeyTap.HistorySeconds", .5f);
+        controller.config().setFloat("Gesture.KeyTap.MinDistance", 10.0f);
         controller.config().save();
         
     }
@@ -107,6 +107,7 @@ class LeapMotionListener extends Listener {
 
                             leftHandConfidence.set(hand.confidence());
                             leftHandVisible.set(true);
+                            
                             //credits to José Pereda (http://jperedadnr.blogspot.de/) 
                             pitchLeftAverage.add(new Double(hand.direction().pitch()));
                             rollLeftAverage.add(new Double(hand.palmNormal().roll()));
@@ -257,6 +258,11 @@ class LeapMotionListener extends Listener {
         return rightHandVisible;
     }
     
+    /**
+     * Calculates the average vector of a LimitQueue that contains vectors.
+     * @param vectors the LimitQueue that contains the vectors 
+     * @return the average vector of all vectors in the given LimitQueue
+     */
     private Vector Average(LimitQueue<Vector> vectors)
     {
         float vx=0f, vy=0f, vz=0f;
@@ -266,26 +272,17 @@ class LeapMotionListener extends Listener {
         return new Vector(vx/vectors.size(), vy/vectors.size(), vz/vectors.size());
     }
     
+    /**
+     * Calculates the average double of a LimitQueue.
+     * @param vectors the LimitQueue that contains the double values
+     * @return the average of all double values in the given LimitQueue
+     */
     private Double dAverage(LimitQueue<Double> vectors){
         double vx=0;
         for(Double d:vectors){
             vx=vx+d;
         }
         return vx/vectors.size();
-    }
-    
-    private class LimitQueue<E> extends LinkedList<E> {
-        private int limit;
-        public LimitQueue(int limit) {
-            this.limit = limit;
-        }
- 
-        @Override
-        public boolean add(E o) {
-            super.add(o);
-            while (size() > limit) { super.remove(); }
-            return true;
-        }
     }
     
     public ObservableValue<Point3D> posHandLeftProperty(){
@@ -327,4 +324,22 @@ class LeapMotionListener extends Listener {
         return rightHandConfidence;
     }
     
+    /**
+     * A linked list that will remove the oldest element in the queue if 
+     * the amount of elements are greater than the limit.
+     * @param <E> the element that needs to be added to the list
+     */
+    private class LimitQueue<E> extends LinkedList<E> {
+        private int limit;
+        public LimitQueue(int limit) {
+            this.limit = limit;
+        }
+ 
+        @Override
+        public boolean add(E o) {
+            super.add(o);
+            while (size() > limit) { super.remove(); }
+            return true;
+        }
+    }
 }

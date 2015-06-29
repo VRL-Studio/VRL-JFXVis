@@ -159,7 +159,10 @@ public class UGXfile {
         return subset_handler;
     }
     
-    
+    /**
+     * Fills the data structure of the class with the information from the read file.
+     * Use this method only once, after the file was read.
+     */
     public void convertReaderStringToData(){
         this.globalVertices = new ArrayList<Float>();
         this.edges = new ArrayList<Edge>();
@@ -213,17 +216,7 @@ public class UGXfile {
                     int pp0 = Integer.parseInt(triangleStringArray[i]);
                     int pp1 = Integer.parseInt(triangleStringArray[i+1]);
                     int pp2 = Integer.parseInt(triangleStringArray[i+2]);
-//                    Vertex3D p0 = new Vertex3D(Integer.parseInt(triangleStringArray[i])*3,
-//                                              Integer.parseInt(triangleStringArray[i])*3+1, 
-//                                              Integer.parseInt(triangleStringArray[i])*3+2);
-//                    Vertex3D p1 = new Vertex3D(Integer.parseInt(triangleStringArray[i+1])*3,
-//                                              Integer.parseInt(triangleStringArray[i+1])*3+1, 
-//                                              Integer.parseInt(triangleStringArray[i+1])*3+2);
-//                    Vertex3D p2 = new Vertex3D(Integer.parseInt(triangleStringArray[i+2])*3,
-//                                              Integer.parseInt(triangleStringArray[i+2])*3+1, 
-//                                              Integer.parseInt(triangleStringArray[i+2])*3+2);
 
-                    
                     triangles.add(new Triangle(pp0,pp1,pp2,geometryCounter2D++));
                 }
                 containsTriangles = true;
@@ -243,27 +236,7 @@ public class UGXfile {
                     int pp2 = Integer.parseInt(quadriStringArray[i+2]);
                     int pp3 = Integer.parseInt(quadriStringArray[i+3]);
                     
-                    
-//                    Vertex3D p0 = new Vertex3D(globalVertices.get(Integer.parseInt(quadriStringArray[i]) * 3),
-//                                              globalVertices.get(Integer.parseInt(quadriStringArray[i]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(quadriStringArray[i]) * 3 + 2));
-//                    Vertex3D p1 = new Vertex3D(globalVertices.get(Integer.parseInt(quadriStringArray[i+1]) * 3),
-//                                              globalVertices.get(Integer.parseInt(quadriStringArray[i+1]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(quadriStringArray[i+1]) * 3 + 2));
-//                    Vertex3D p2 = new Vertex3D(globalVertices.get(Integer.parseInt(quadriStringArray[i+2]) * 3),
-//                                              globalVertices.get(Integer.parseInt(quadriStringArray[i+2]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(quadriStringArray[i+2]) * 3 + 2));
-//                    Vertex3D p3 = new Vertex3D(globalVertices.get(Integer.parseInt(quadriStringArray[i+3]) * 3),
-//                                              globalVertices.get(Integer.parseInt(quadriStringArray[i+3]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(quadriStringArray[i+3]) * 3 + 2)); 
-                    
-                    
-//                    System.out.println(pp0);
-//                    System.out.println(pp1);
-//                    System.out.println(pp2);
-//                    System.out.println(pp3);
-//                    System.out.println("--------------");
-                    
+
                     quadrilaterals.add(new Quadrilateral(pp0, pp1, pp2, pp3, geometryCounter2D+=2));
                 }
                 containsQuadrilaterals = true;
@@ -285,20 +258,6 @@ public class UGXfile {
                     int pp2 = Integer.parseInt(tetraStringArray[i+2]);
                     int pp3 = Integer.parseInt(tetraStringArray[i+3]);
                     
-                    
-//                    Vertex3D p0 = new Vertex3D(globalVertices.get(Integer.parseInt(tetraStringArray[i]) * 3),
-//                                              globalVertices.get(Integer.parseInt(tetraStringArray[i]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(tetraStringArray[i]) * 3 + 2));
-//                    Vertex3D p1 = new Vertex3D(globalVertices.get(Integer.parseInt(tetraStringArray[i+1]) * 3),
-//                                              globalVertices.get(Integer.parseInt(tetraStringArray[i+1]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(tetraStringArray[i+1]) * 3 + 2));
-//                    Vertex3D p2 = new Vertex3D(globalVertices.get(Integer.parseInt(tetraStringArray[i+2]) * 3),
-//                                              globalVertices.get(Integer.parseInt(tetraStringArray[i+2]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(tetraStringArray[i+2]) * 3 + 2));
-//                    Vertex3D p3 = new Vertex3D(globalVertices.get(Integer.parseInt(tetraStringArray[i+3]) * 3),
-//                                              globalVertices.get(Integer.parseInt(tetraStringArray[i+3]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(tetraStringArray[i+3]) * 3 + 2));
- 
                     tetrahedrons.add(new Tetrahedron(pp0, pp1, pp2, pp3, geometryCounter3D++));
                 }
                 containsTetrahedrons = true;
@@ -322,31 +281,6 @@ public class UGXfile {
                     int pp6 = Integer.parseInt(hexaStringArray[i+6]);
                     int pp7 = Integer.parseInt(hexaStringArray[i+7]);
                     
-//                    Vertex3D p0 = new Vertex3D(globalVertices.get(Integer.parseInt(hexaStringArray[i]) * 3),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i]) * 3 + 2));
-//                    Vertex3D p1 = new Vertex3D(globalVertices.get(Integer.parseInt(hexaStringArray[i+1]) * 3),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i+1]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i+1]) * 3 + 2));
-//                    Vertex3D p2 = new Vertex3D(globalVertices.get(Integer.parseInt(hexaStringArray[i+2]) * 3),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i+2]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i+2]) * 3 + 2));
-//                    Vertex3D p3 = new Vertex3D(globalVertices.get(Integer.parseInt(hexaStringArray[i+3]) * 3),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i+3]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i+3]) * 3 + 2));
-//                    Vertex3D p4 = new Vertex3D(globalVertices.get(Integer.parseInt(hexaStringArray[i+4]) * 3),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i+4]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i+4]) * 3 + 2));
-//                    Vertex3D p5 = new Vertex3D(globalVertices.get(Integer.parseInt(hexaStringArray[i+5]) * 3),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i+5]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i+5]) * 3 + 2));
-//                    Vertex3D p6 = new Vertex3D(globalVertices.get(Integer.parseInt(hexaStringArray[i+6]) * 3),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i+6]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i+6]) * 3 + 2));
-//                    Vertex3D p7 = new Vertex3D(globalVertices.get(Integer.parseInt(hexaStringArray[i+7]) * 3),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i+7]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(hexaStringArray[i+7]) * 3 + 2));
-                          
                     hexahedrons.add(new Hexahedron(pp0, pp1, pp2, pp3, pp4, pp5, pp6, pp7, geometryCounter3D++));
                 }
                 containsHexahedrons = true;
@@ -368,25 +302,6 @@ public class UGXfile {
                     int pp4 = Integer.parseInt(prismStringArray[i+4]);
                     int pp5 = Integer.parseInt(prismStringArray[i+5]);
                     
-//                    Vertex3D p0 = new Vertex3D(globalVertices.get(Integer.parseInt(prismStringArray[i]) * 3),
-//                                              globalVertices.get(Integer.parseInt(prismStringArray[i]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(prismStringArray[i]) * 3 + 2));
-//                    Vertex3D p1 = new Vertex3D(globalVertices.get(Integer.parseInt(prismStringArray[i+1]) * 3),
-//                                              globalVertices.get(Integer.parseInt(prismStringArray[i+1]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(prismStringArray[i+1]) * 3 + 2));
-//                    Vertex3D p2 = new Vertex3D(globalVertices.get(Integer.parseInt(prismStringArray[i+2]) * 3),
-//                                              globalVertices.get(Integer.parseInt(prismStringArray[i+2]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(prismStringArray[i+2]) * 3 + 2));
-//                    Vertex3D p3 = new Vertex3D(globalVertices.get(Integer.parseInt(prismStringArray[i+3]) * 3),
-//                                              globalVertices.get(Integer.parseInt(prismStringArray[i+3]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(prismStringArray[i+3]) * 3 + 2));
-//                    Vertex3D p4 = new Vertex3D(globalVertices.get(Integer.parseInt(prismStringArray[i+4]) * 3),
-//                                              globalVertices.get(Integer.parseInt(prismStringArray[i+4]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(prismStringArray[i+4]) * 3 + 2));
-//                    Vertex3D p5 = new Vertex3D(globalVertices.get(Integer.parseInt(prismStringArray[i+5]) * 3),
-//                                              globalVertices.get(Integer.parseInt(prismStringArray[i+5]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(prismStringArray[i+5]) * 3 + 2));
-                    
                     prisms.add(new Prism(pp0, pp1, pp2, pp3, pp4, pp5, geometryCounter3D++));
                 }
                 containsPrisms = true;
@@ -406,22 +321,6 @@ public class UGXfile {
                     int pp2 = Integer.parseInt(pyraStringArray[i+2]);
                     int pp3 = Integer.parseInt(pyraStringArray[i+3]);
                     int pp4 = Integer.parseInt(pyraStringArray[i+4]);
-                    
-//                    Vertex3D p0 = new Vertex3D(globalVertices.get(Integer.parseInt(pyraStringArray[i]) * 3),
-//                                              globalVertices.get(Integer.parseInt(pyraStringArray[i]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(pyraStringArray[i]) * 3 + 2));
-//                    Vertex3D p1 = new Vertex3D(globalVertices.get(Integer.parseInt(pyraStringArray[i+1]) * 3),
-//                                              globalVertices.get(Integer.parseInt(pyraStringArray[i+1]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(pyraStringArray[i+1]) * 3 + 2));
-//                    Vertex3D p2 = new Vertex3D(globalVertices.get(Integer.parseInt(pyraStringArray[i+2]) * 3),
-//                                              globalVertices.get(Integer.parseInt(pyraStringArray[i+2]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(pyraStringArray[i+2]) * 3 + 2));
-//                    Vertex3D p3 = new Vertex3D(globalVertices.get(Integer.parseInt(pyraStringArray[i+3]) * 3),
-//                                              globalVertices.get(Integer.parseInt(pyraStringArray[i+3]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(pyraStringArray[i+3]) * 3 + 2));
-//                    Vertex3D p4 = new Vertex3D(globalVertices.get(Integer.parseInt(pyraStringArray[i+4]) * 3),
-//                                              globalVertices.get(Integer.parseInt(pyraStringArray[i+4]) * 3 + 1),
-//                                              globalVertices.get(Integer.parseInt(pyraStringArray[i+4]) * 3 + 2));
                     
                     pyramids.add(new Pyramid(pp0, pp1, pp2, pp3, pp4, geometryCounter3D++));
                 }
@@ -493,7 +392,9 @@ public class UGXfile {
         return geometryCounter2D;
     }
 
-        /**Calculates the biggest distance between two vertices in the geometry
+        /**Calculates the biggest distance between two vertices in the geometry.
+         * If the given geometry has more than 10.000 vertices, it will use a more
+         * simple way (less accuracy) to calculate it
          */
     private void calcBiggestDistance(){
         

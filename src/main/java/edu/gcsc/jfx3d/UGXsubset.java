@@ -115,9 +115,6 @@ public class UGXsubset {
         this.colors = color;
     }
 
-   // public void setState(int state) {
-  //      this.state = state;
-   // }
 
     public void setVertices(ArrayList<Integer> vertices) {
         this.vertices = vertices;
@@ -184,6 +181,10 @@ public class UGXsubset {
             return volArray;
         }
     
+    /**
+     * Fills the data structure of the class with the information from the read file.
+     * Use this method only once, after the file was read.
+     */
     public void convertReaderStringToData(){
              
         this.vertices = new ArrayList<Integer>();

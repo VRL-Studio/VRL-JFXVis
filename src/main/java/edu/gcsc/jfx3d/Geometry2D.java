@@ -7,7 +7,7 @@ package edu.gcsc.jfx3d;
 
 import java.util.ArrayList;
 
-/**
+/**Abstract class for all 2D geometries.
  *
  * @author Eugen
  */
